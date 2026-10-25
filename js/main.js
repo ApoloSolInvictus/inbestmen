@@ -1,141 +1,85 @@
-(function ($) {
-    "use strict";
+(function () {
+    'use strict';
 
-    // Spinner
-    var spinner = function () {
-        setTimeout(function () {
-            if ($('#spinner').length > 0) {
-                $('#spinner').removeClass('show');
+    const loader = document.getElementById('spinner');
+    const backToTop = document.querySelector('.back-to-top');
+    const counters = document.querySelectorAll('[data-count]');
+    const projectForm = document.getElementById('projectForm');
+    const formStatus = document.getElementById('formStatus');
+    const submitButton = document.getElementById('submitProjectBtn');
+
+    window.addEventListener('load', function () {
+        window.setTimeout(function () {
+            loader?.classList.add('hidden');
+        }, 250);
+    });
+
+    const revealObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                revealObserver.unobserve(entry.target);
             }
-        }, 1);
-    };
-    spinner(0);
-    
-    
-    // Initiate the wowjs
-    new WOW().init();
+        });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(function (element) { revealObserver.observe(element); });
 
-
-    // Sticky Navbar
-    $(window).scroll(function () {
-        if ($(window).width() > 992) {
-            if ($(this).scrollTop() > 45) {
-                $('.sticky-top .container').addClass('shadow-sm').css('max-width', '100%');
-            } else {
-                $('.sticky-top .container').removeClass('shadow-sm').css('max-width', $('.topbar .container').width());
+    const countObserver = new IntersectionObserver(function (entries, observer) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            const element = entry.target;
+            const target = Number(element.dataset.count);
+            const decimal = String(target).includes('.') ? 1 : 0;
+            const duration = 1000;
+            const start = performance.now();
+            function tick(now) {
+                const progress = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                element.textContent = (target * eased).toFixed(decimal);
+                if (progress < 1) window.requestAnimationFrame(tick);
             }
-        } else {
-            $('.sticky-top .container').addClass('shadow-sm').css('max-width', '100%');
+            window.requestAnimationFrame(tick);
+            observer.unobserve(element);
+        });
+    }, { threshold: 0.8 });
+    counters.forEach(function (counter) { countObserver.observe(counter); });
+
+    window.addEventListener('scroll', function () {
+        backToTop?.classList.toggle('show', window.scrollY > 500);
+    }, { passive: true });
+
+    document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+        link.addEventListener('click', function () {
+            const nav = document.getElementById('siteNav');
+            if (nav?.classList.contains('show') && window.bootstrap) {
+                window.bootstrap.Collapse.getOrCreateInstance(nav).hide();
+            }
+        });
+    });
+
+    projectForm?.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        formStatus.className = 'form-status show info';
+        formStatus.textContent = 'Preparing your structured project brief…';
+        submitButton.disabled = true;
+
+        const payload = Object.fromEntries(new FormData(projectForm).entries());
+        try {
+            const response = await fetch('/api/ai/screen-project', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'The screening service is not configured yet.');
+            formStatus.className = 'form-status show success';
+            formStatus.textContent = 'Your project brief is ready for the next review stage.';
+            projectForm.reset();
+        } catch (_error) {
+            formStatus.className = 'form-status show info';
+            formStatus.textContent = 'Preview mode: the intake form is ready. Connect OPENAI_API_KEY and ELEVENLABS_API_KEY in Vercel to activate AI screening.';
+        } finally {
+            submitButton.disabled = false;
         }
     });
-
-
-    // Hero Header carousel
-    $(".header-carousel").owlCarousel({
-        items: 1,
-        autoplay: true,
-        smartSpeed: 2000,
-        center: false,
-        dots: false,
-        loop: true,
-        margin: 0,
-        nav : true,
-        navText : [
-            '<i class="bi bi-arrow-left"></i>',
-            '<i class="bi bi-arrow-right"></i>'
-        ]
-    });
-
-
-
-    // Project carousel
-    $(".project-carousel").owlCarousel({
-        autoplay: true,
-        smartSpeed: 1000,
-        center: false,
-        dots: true,
-        loop: true,
-        margin: 25,
-        nav : false,
-        navText : [
-            '<i class="bi bi-arrow-left"></i>',
-            '<i class="bi bi-arrow-right"></i>'
-        ],
-        responsiveClass: true,
-        responsive: {
-            0:{
-                items:1
-            },
-            576:{
-                items:1
-            },
-            768:{
-                items:2
-            },
-            992:{
-                items:2
-            },
-            1200:{
-                items:2
-            }
-        }
-    });
-
-    // testimonial carousel
-    $(".testimonial-carousel").owlCarousel({
-        autoplay: true,
-        smartSpeed: 1500,
-        center: false,
-        dots: true,
-        loop: true,
-        margin: 25,
-        nav : false,
-        navText : [
-            '<i class="bi bi-arrow-left"></i>',
-            '<i class="bi bi-arrow-right"></i>'
-        ],
-        responsiveClass: true,
-        responsive: {
-            0:{
-                items:1
-            },
-            576:{
-                items:1
-            },
-            768:{
-                items:2
-            },
-            992:{
-                items:2
-            },
-            1200:{
-                items:2
-            }
-        }
-    });
-
-
-    // Facts counter
-    $('[data-toggle="counter-up"]').counterUp({
-        delay: 5,
-        time: 2000
-    });
-
-
-    
-   // Back to top button
-   $(window).scroll(function () {
-    if ($(this).scrollTop() > 300) {
-        $('.back-to-top').fadeIn('slow');
-    } else {
-        $('.back-to-top').fadeOut('slow');
-    }
-    });
-    $('.back-to-top').click(function () {
-        $('html, body').animate({scrollTop: 0}, 1500, 'easeInOutExpo');
-        return false;
-    });
-
-
-})(jQuery);
-
+})();
