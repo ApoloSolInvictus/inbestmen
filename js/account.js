@@ -1,5 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import './coin-mark.js';
 
 const config = window.INBESTMEN_FIREBASE_CONFIG;
 const status = document.getElementById('accountStatus');

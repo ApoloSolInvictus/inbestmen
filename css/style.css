@@ -35,6 +35,8 @@ h1, h2, h3, p { margin-top: 0; }
 .navbar { min-height: 78px; }
 .brand-lockup { align-items: center; display: inline-flex; gap: 10px; }
 .brand-logo-image { background: #fff; border-radius: 8px; display: block; height: 38px; object-fit: contain; padding: 2px 7px; width: 164px; }
+.coin-token { align-items: center; display: inline-flex; flex: 0 0 auto; height: 1.05em; justify-content: center; margin: 0 .08em; vertical-align: -.12em; width: 1.05em; }
+.coin-token img { display: block; height: 100%; object-fit: contain; width: 100%; }
 .brand-mark { align-items: center; background: var(--ink); border-radius: 13px; color: var(--cyan); display: inline-flex; font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; height: 38px; justify-content: center; letter-spacing: -.09em; line-height: 1; position: relative; width: 38px; }
 .brand-mark::after { border: 1px solid var(--cyan); border-radius: 8px; content: ''; height: 27px; left: 5px; position: absolute; top: 5px; width: 27px; }
 .brand-mark span { color: var(--lime); }
