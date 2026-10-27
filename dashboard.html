@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Your inBestmen social investment dashboard.">
+    <title>Dashboard — inBestmen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+</head>
+<body class="dashboard-page">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar" id="dashboardSidebar">
+            <div class="sidebar-top"><a class="brand-lockup" href="index.html"><span class="brand-mark">i<span>B</span></span><span class="brand-name">inBestmen</span></a><button class="sidebar-close" id="sidebarClose" type="button" aria-label="Close menu">×</button></div>
+            <div class="sidebar-label">Your space</div>
+            <nav class="dashboard-nav" aria-label="Dashboard navigation">
+                <button class="dashboard-nav-link active" data-view="overview"><i class="bi bi-grid-1x2"></i><span>Home</span></button>
+                <button class="dashboard-nav-link" data-view="money"><i class="bi bi-wallet2"></i><span>inBest Money</span><b class="nav-badge">iB</b></button>
+                <button class="dashboard-nav-link" data-view="projects"><i class="bi bi-compass"></i><span>inBest Projects</span></button>
+                <button class="dashboard-nav-link" data-view="my-investments"><i class="bi bi-heart"></i><span>My inBest</span></button>
+                <button class="dashboard-nav-link" data-view="future"><i class="bi bi-stars"></i><span>inBest Future</span></button>
+            </nav>
+            <div class="sidebar-bottom"><div class="sidebar-note"><span class="signal-dot"></span><div><strong>Community signal</strong><small>Always moving forward</small></div></div><button id="signOut" class="sign-out" type="button"><i class="bi bi-box-arrow-left"></i> Sign out</button></div>
+        </aside>
+
+        <div class="dashboard-main">
+            <header class="dashboard-header"><button id="sidebarOpen" class="mobile-menu" type="button" aria-label="Open menu"><i class="bi bi-list"></i></button><div class="header-context"><span class="header-label">Your inBestmen space</span><span id="pageTitle">Home</span></div><div class="header-actions"><button class="icon-button" type="button" aria-label="Notifications"><i class="bi bi-bell"></i><span class="notification-dot"></span></button><div class="user-chip"><span id="userAvatar" class="user-avatar">IB</span><span><strong id="userName">Guest Member</strong><small id="userEmail">Preview mode</small></span></div></div></header>
+
+            <main class="dashboard-content">
+                <section class="dashboard-view active" data-view-panel="overview">
+                    <div class="welcome-row"><div><span class="eyebrow">Your starting point</span><h1>Good morning, <span id="welcomeName">friend</span>.</h1><p>Welcome to your inBestmen space. This is where your curiosity becomes a signal: discover projects, add iB Coins and follow the future you are helping build.</p></div><div class="welcome-orbit"><span>iB</span></div></div>
+                    <div class="overview-grid"><article class="balance-card"><div class="card-topline"><span>AVAILABLE BALANCE</span><span class="card-live"><i class="bi bi-circle-fill"></i> Personal</span></div><strong class="balance-amount"><span>iB</span> <span id="balanceAmount">0</span></strong><p>1 iB Coin is designed to track 1 USD.</p><a class="btn btn-primary" href="#" data-open-view="money">Add iB Coins <i class="bi bi-plus-lg"></i></a></article><article class="progress-card"><div class="card-topline"><span>YOUR COMMUNITY IMPACT</span><i class="bi bi-arrow-up-right"></i></div><div class="impact-number"><strong id="impactProjects">0</strong><span>projects supported</span></div><div class="mini-progress"><span style="width: 62%"></span></div><div class="impact-footer"><span>Next milestone</span><strong>10 projects</strong></div></article></div>
+                    <div class="dashboard-section-heading"><div><span class="eyebrow">The path</span><h2>How inBestmen works for you.</h2></div><button class="text-button" data-open-view="projects">Explore projects <i class="bi bi-arrow-up-right"></i></button></div>
+                    <div class="journey-grid"><article><span>01</span><i class="bi bi-wallet2"></i><h3>Load your iB wallet</h3><p>Buy iB Coins through PayPal and keep your personal balance ready for the projects you believe in.</p></article><article><span>02</span><i class="bi bi-compass"></i><h3>Find a signal</h3><p>Browse projects that have passed AI intake and human review, then listen to the full story.</p></article><article><span>03</span><i class="bi bi-heart"></i><h3>Back what matters</h3><p>Donate iB Coins, follow the progress in My inBest and see the finished ideas in inBest Future.</p></article></div>
+                </section>
+
+                <section class="dashboard-view" data-view-panel="money"><div class="view-heading"><div><span class="eyebrow">inBest Money</span><h1>Put your signal in motion.</h1><p>Purchase iB Coins through PayPal. Your coins stay in your personal wallet until you choose the projects you want to support.</p></div><div class="wallet-balance"><small>Your balance</small><strong><span>iB</span> <span class="balance-value">0</span></strong></div></div><div class="money-layout"><article class="wallet-card"><div class="card-topline"><span>PERSONAL iB WALLET</span><i class="bi bi-shield-check"></i></div><strong><span>iB</span> <span class="balance-value">0</span></strong><p>Every coin is reserved for your future choices.</p><div class="wallet-actions"><button class="btn btn-primary" data-open-view="projects">Donate iB Coins <i class="bi bi-arrow-right"></i></button><button class="btn btn-outline-dark" type="button" data-coming-soon>Transaction history</button></div></article><div class="purchase-panel"><div class="purchase-heading"><div><span class="eyebrow">Choose your orbit</span><h2>Buy iB Coins</h2></div><span class="paypal-mark">Pay<span>Pal</span></span></div><p class="muted-copy">Select an amount to continue securely with PayPal.</p><div class="amount-grid"><button data-amount="1">$1 <small>1 iB</small></button><button data-amount="2">$2 <small>2 iB</small></button><button data-amount="3">$3 <small>3 iB</small></button><button data-amount="5">$5 <small>5 iB</small></button><button data-amount="8">$8 <small>8 iB</small></button><button data-amount="13">$13 <small>13 iB</small></button><button data-amount="21">$21 <small>21 iB</small></button></div><p class="payment-note"><i class="bi bi-lock"></i> PayPal checkout will be activated when the merchant account is connected.</p></div></div></section>
+
+                <section class="dashboard-view" data-view-panel="projects"><div class="view-heading"><div><span class="eyebrow">inBest Projects</span><h1>Meet the ideas in motion.</h1><p>These projects have completed the first AI conversation and human review. Explore their signal, listen to their story and choose where your iB Coins can help.</p></div><button class="filter-button" type="button"><i class="bi bi-sliders"></i> All categories</button></div><div id="projectGrid" class="project-grid"></div></section>
+
+                <section class="dashboard-view" data-view-panel="my-investments"><div class="view-heading"><div><span class="eyebrow">My inBest</span><h1>Follow what you believe in.</h1><p>Projects you support appear here so you can see their progress, updates and community momentum in one place.</p></div></div><div id="myProjectGrid" class="project-grid"></div><div class="empty-state" id="myEmptyState"><div class="empty-icon"><i class="bi bi-heart"></i></div><h2>Your first signal is waiting.</h2><p>Explore inBest Projects and donate iB Coins to start building your personal constellation of impact.</p><button class="btn btn-primary" data-open-view="projects">Explore projects <i class="bi bi-arrow-right"></i></button></div></section>
+
+                <section class="dashboard-view" data-view-panel="future"><div class="view-heading"><div><span class="eyebrow">inBest Future</span><h1>See what collective belief can build.</h1><p>Finished projects are the living record of the inBestmen community: ideas that reached their goal and became part of a better planet.</p></div><span class="future-count"><i class="bi bi-stars"></i> 24 ideas completed</span></div><div id="futureGrid" class="project-grid future-grid"></div></section>
+            </main>
+        </div>
+    </div>
+    <div id="toast" class="dashboard-toast" role="status"></div>
+    <script src="js/firebase-config.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
