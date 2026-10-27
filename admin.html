@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Private inBestmen management console for project review, agents and payments.">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admin Console — inBestmen</title>
+    <link rel="icon" type="image/png" sizes="512x512" href="images/inbestmen-favicon.png">
+    <link rel="apple-touch-icon" href="images/inbestmen-logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="css/admin.css" rel="stylesheet">
+</head>
+<body class="admin-page">
+    <main id="adminGate" class="admin-gate">
+        <div class="admin-gate-orbit admin-gate-orbit-one"></div>
+        <div class="admin-gate-orbit admin-gate-orbit-two"></div>
+        <section class="admin-login-card" aria-labelledby="adminLoginTitle">
+            <a class="admin-brand" href="index.html" aria-label="Back to inBestmen home"><img src="images/inbestmen-wordmark.png" alt="inBestmen"></a>
+            <span class="admin-kicker"><i class="bi bi-shield-lock"></i> Private workspace</span>
+            <h1 id="adminLoginTitle">Management<br><em>console.</em></h1>
+            <p class="admin-login-copy">Review the global project pipeline, supervise AI intake and keep every community payment accountable.</p>
+            <button id="googleAdmin" class="admin-google-button" type="button"><span class="google-g">G</span> Continue with Google</button>
+            <div class="admin-divider"><span>or use your team email</span></div>
+            <form id="adminEmailSignIn" class="admin-form">
+                <label for="adminEmail">Team email</label>
+                <input id="adminEmail" type="email" autocomplete="email" placeholder="team@inbestmen.com" required>
+                <label for="adminPassword">Password</label>
+                <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Your password" required>
+                <button class="admin-primary-button" type="submit">Enter console <i class="bi bi-arrow-up-right"></i></button>
+            </form>
+            <button id="adminPreview" class="admin-preview-button" type="button"><i class="bi bi-eye"></i> Preview the management console</button>
+            <p id="adminAuthStatus" class="admin-status" role="status" aria-live="polite"></p>
+            <p class="admin-security-note"><i class="bi bi-lock"></i> This route is not linked publicly. Production access requires an approved Firebase admin claim or team email.</p>
+        </section>
+    </main>
+
+    <div id="adminApp" class="admin-app" hidden>
+        <aside id="adminSidebar" class="admin-sidebar">
+            <div class="admin-sidebar-top">
+                <a class="admin-brand" href="index.html" aria-label="Back to inBestmen home"><img src="images/inbestmen-wordmark.png" alt="inBestmen"></a>
+                <button id="adminSidebarClose" class="admin-sidebar-close" type="button" aria-label="Close admin menu">×</button>
+            </div>
+            <span class="admin-console-label">Management console</span>
+            <nav class="admin-nav" aria-label="Admin navigation">
+                <button class="admin-nav-link active" data-admin-view="overview" type="button"><i class="bi bi-grid-1x2"></i><span>Overview</span></button>
+                <button class="admin-nav-link" data-admin-view="agents" type="button"><i class="bi bi-soundwave"></i><span>ElevenLabs agents</span><b class="admin-nav-count">6</b></button>
+                <button class="admin-nav-link" data-admin-view="reviews" type="button"><i class="bi bi-clipboard-check"></i><span>Project review</span><b id="reviewNavCount" class="admin-nav-count coral">12</b></button>
+                <button class="admin-nav-link" data-admin-view="payments" type="button"><i class="bi bi-cash-stack"></i><span>Payment ledger</span></button>
+                <button class="admin-nav-link" data-admin-view="completed" type="button"><i class="bi bi-stars"></i><span>Completed projects</span></button>
+            </nav>
+            <div class="admin-sidebar-bottom">
+                <div class="admin-system-status"><span class="admin-live-dot"></span><div><strong>Operations online</strong><small>Demo data connected</small></div></div>
+                <button id="adminSignOut" class="admin-sign-out" type="button"><i class="bi bi-box-arrow-left"></i> Sign out</button>
+            </div>
+        </aside>
+
+        <div class="admin-main">
+            <header class="admin-header">
+                <button id="adminSidebarOpen" class="admin-mobile-menu" type="button" aria-label="Open admin menu"><i class="bi bi-list"></i></button>
+                <div class="admin-header-context"><span>inBestmen / private route</span><strong id="adminPageTitle">Overview</strong></div>
+                <div class="admin-header-actions"><span class="admin-environment"><i class="bi bi-circle-fill"></i> Preview environment</span><div class="admin-user-chip"><span id="adminAvatar" class="admin-avatar">IB</span><span><strong id="adminUserName">Management team</strong><small id="adminUserEmail">Preview mode</small></span></div></div>
+            </header>
+
+            <main class="admin-content">
+                <div id="adminDemoBanner" class="admin-demo-banner"><i class="bi bi-info-circle"></i><span><strong>Preview data only.</strong> Connect Firebase, ElevenLabs and PayPal webhooks before using this console for real decisions or payouts.</span></div>
+
+                <section class="admin-view active" data-admin-panel="overview">
+                    <div class="admin-view-heading"><div><span class="admin-eyebrow">Command center</span><h2>See the whole signal.</h2><p>One place for the conversations, decisions and payments moving through inBestmen.</p></div><a class="admin-secondary-button" href="invest-in-inbest.html" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Open project profile</a></div>
+                    <div class="admin-metric-grid">
+                        <article class="admin-metric-card metric-cyan"><span>ACTIVE AI AGENTS</span><strong>06</strong><small><i class="bi bi-arrow-up-right"></i> 2 sessions live now</small></article>
+                        <article class="admin-metric-card metric-violet"><span>AWAITING BOARD REVIEW</span><strong id="pendingProjectsMetric">12</strong><small><i class="bi bi-clock"></i> 4 marked priority</small></article>
+                        <article class="admin-metric-card metric-lime"><span>PAYMENTS DUE</span><strong>$48.6k</strong><small><i class="bi bi-arrow-up-right"></i> Across 18 projects</small></article>
+                        <article class="admin-metric-card metric-coral"><span>PROJECTS COMPLETED</span><strong>24</strong><small><i class="bi bi-stars"></i> 8 countries reached</small></article>
+                    </div>
+                    <div class="admin-overview-grid">
+                        <article class="admin-panel priority-panel"><div class="admin-panel-heading"><div><span class="admin-eyebrow">Next decisions</span><h3>Board review queue</h3></div><button class="admin-text-button" data-admin-view-link="reviews" type="button">View all <i class="bi bi-arrow-up-right"></i></button></div><div class="priority-list"><div class="priority-item"><span class="priority-number">01</span><div><strong>Invest in inBest</strong><small>Global organization · $1,000,000 goal</small></div><span class="status-pill priority">Priority</span></div><div class="priority-item"><span class="priority-number">02</span><div><strong>BlueLoop</strong><small>Water / Climate · Nairobi, Kenya</small></div><span class="status-pill review">Human review</span></div><div class="priority-item"><span class="priority-number">03</span><div><strong>Orbit School</strong><small>Education / AI · Medellín, Colombia</small></div><span class="status-pill review">Human review</span></div></div></article>
+                        <article class="admin-panel activity-panel"><div class="admin-panel-heading"><div><span class="admin-eyebrow">Live operations</span><h3>Agent activity</h3></div><span class="panel-live"><i class="bi bi-circle-fill"></i> Live</span></div><div class="activity-feed"><div><span class="activity-icon cyan"><i class="bi bi-mic"></i></span><p><strong>Intake agent 04</strong> completed a founder session<small>2 min ago · JSON brief ready</small></p></div><div><span class="activity-icon violet"><i class="bi bi-person-check"></i></span><p><strong>Review desk</strong> requested more detail from Solar Commons<small>18 min ago · Waiting for founder</small></p></div><div><span class="activity-icon lime"><i class="bi bi-paypal"></i></span><p><strong>PayPal ledger</strong> reconciled 38 contributions<small>42 min ago · $1,284.00 matched</small></p></div></div></article>
+                    </div>
+                    <div class="admin-panel health-panel"><div class="admin-panel-heading"><div><span class="admin-eyebrow">System health</span><h3>Every layer is visible.</h3></div><span class="health-score"><i class="bi bi-check-circle-fill"></i> 98.4% healthy</span></div><div class="health-grid"><div><span>ElevenLabs intake</span><strong>Operational</strong><b><i style="width:98%"></i></b></div><div><span>Firebase auth</span><strong>Operational</strong><b><i style="width:100%"></i></b></div><div><span>PayPal webhooks</span><strong>Sandbox ready</strong><b><i style="width:84%"></i></b></div><div><span>Project publishing</span><strong>Operational</strong><b><i style="width:96%"></i></b></div></div></div>
+                </section>
+
+                <section class="admin-view" data-admin-panel="agents">
+                    <div class="admin-view-heading"><div><span class="admin-eyebrow">Agent command</span><h2>Listen to every conversation.</h2><p>Monitor the ElevenLabs intake layer, handoffs and structured project briefs before they reach the board.</p></div><button class="admin-primary-button compact" data-agent-action="new" type="button"><i class="bi bi-plus-lg"></i> Add an agent</button></div>
+                    <div class="agent-summary-row"><div><span>Sessions today</span><strong>148</strong></div><div><span>Average completion</span><strong>87%</strong></div><div><span>Human handoffs</span><strong>19</strong></div><div><span>Briefs ready</span><strong>34</strong></div></div>
+                    <div class="agent-grid">
+                        <article class="agent-card"><div class="agent-card-top"><span class="agent-avatar cyan"><i class="bi bi-mic"></i></span><span class="status-pill online"><i class="bi bi-circle-fill"></i> Online</span></div><span class="agent-type">INTAKE / GLOBAL</span><h3>Founder First Listen</h3><p>Asks the core project questions and creates the first structured JSON brief.</p><div class="agent-meta"><span>Agent ID <strong>el_8f2a••••</strong></span><span>42 sessions</span></div><button class="admin-card-button" data-agent-action="open" type="button">Open agent <i class="bi bi-arrow-up-right"></i></button></article>
+                        <article class="agent-card"><div class="agent-card-top"><span class="agent-avatar violet"><i class="bi bi-stars"></i></span><span class="status-pill online"><i class="bi bi-circle-fill"></i> Online</span></div><span class="agent-type">FOLLOW-UP / CLARITY</span><h3>Signal Clarifier</h3><p>Returns to incomplete briefs and helps founders make the opportunity clearer.</p><div class="agent-meta"><span>Agent ID <strong>el_2b91••••</strong></span><span>31 sessions</span></div><button class="admin-card-button" data-agent-action="open" type="button">Open agent <i class="bi bi-arrow-up-right"></i></button></article>
+                        <article class="agent-card"><div class="agent-card-top"><span class="agent-avatar lime"><i class="bi bi-volume-up"></i></span><span class="status-pill listening"><i class="bi bi-circle-fill"></i> Listening</span></div><span class="agent-type">PROJECT NARRATION</span><h3>Project Storyteller</h3><p>Turns approved project briefs into accessible audio for the community.</p><div class="agent-meta"><span>Agent ID <strong>el_71c4••••</strong></span><span>75 stories</span></div><button class="admin-card-button" data-agent-action="open" type="button">Open agent <i class="bi bi-arrow-up-right"></i></button></article>
+                        <article class="agent-card"><div class="agent-card-top"><span class="agent-avatar coral"><i class="bi bi-translate"></i></span><span class="status-pill paused"><i class="bi bi-pause-fill"></i> Paused</span></div><span class="agent-type">LOCALIZATION / GLOBAL</span><h3>World Voice</h3><p>Prepares multilingual project summaries for the next community release.</p><div class="agent-meta"><span>Agent ID <strong>el_44c8••••</strong></span><span>12 languages</span></div><button class="admin-card-button" data-agent-action="open" type="button">Open agent <i class="bi bi-arrow-up-right"></i></button></article>
+                    </div>
+                </section>
+
+                <section class="admin-view" data-admin-panel="reviews">
+                    <div class="admin-view-heading"><div><span class="admin-eyebrow">Human judgment</span><h2>Projects ready for a decision.</h2><p>Review the AI brief, open the project profile and record the board’s next step.</p></div><span class="admin-filter-label"><i class="bi bi-funnel"></i> Priority first</span></div>
+                    <article class="admin-panel table-panel"><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Project</th><th>Founder / location</th><th>AI brief</th><th>Goal</th><th>Decision</th></tr></thead><tbody>
+                        <tr data-project-row="invest-in-inbest"><td><div class="table-project"><span class="table-project-mark cyan"><i class="bi bi-globe2"></i></span><div><strong>Invest in inBest</strong><small>Global organization</small></div></div></td><td>inBestmen team<br><small>Worldwide</small></td><td><span class="status-pill ready">JSON ready</span></td><td><strong>$1,000,000</strong></td><td><div class="table-actions"><a class="table-link" href="invest-in-inbest.html" target="_blank" rel="noopener">Profile</a><button class="table-action approve" data-review-action="approve" type="button">Approve</button><button class="table-action request" data-review-action="request" type="button">Request changes</button></div></td></tr>
+                        <tr data-project-row="blueloop"><td><div class="table-project"><span class="table-project-mark blue"><i class="bi bi-droplet-half"></i></span><div><strong>BlueLoop</strong><small>Water / Climate</small></div></div></td><td>Amina Njoroge<br><small>Nairobi, Kenya</small></td><td><span class="status-pill ready">JSON ready</span></td><td><strong>12,000 iB</strong></td><td><div class="table-actions"><button class="table-action approve" data-review-action="approve" type="button">Approve</button><button class="table-action request" data-review-action="request" type="button">Request changes</button></div></td></tr>
+                        <tr data-project-row="orbit-school"><td><div class="table-project"><span class="table-project-mark violet"><i class="bi bi-stars"></i></span><div><strong>Orbit School</strong><small>Education / AI</small></div></div></td><td>Mateo Rivera<br><small>Medellín, Colombia</small></td><td><span class="status-pill review">Human review</span></td><td><strong>10,000 iB</strong></td><td><div class="table-actions"><button class="table-action approve" data-review-action="approve" type="button">Approve</button><button class="table-action request" data-review-action="request" type="button">Request changes</button></div></td></tr>
+                        <tr data-project-row="care-circle"><td><div class="table-project"><span class="table-project-mark coral"><i class="bi bi-heart-pulse"></i></span><div><strong>Care Circle</strong><small>Health / Wellbeing</small></div></div></td><td>Leila Santos<br><small>Manila, Philippines</small></td><td><span class="status-pill review">Human review</span></td><td><strong>9,000 iB</strong></td><td><div class="table-actions"><button class="table-action approve" data-review-action="approve" type="button">Approve</button><button class="table-action request" data-review-action="request" type="button">Request changes</button></div></td></tr>
+                    </tbody></table></div></article>
+                </section>
+
+                <section class="admin-view" data-admin-panel="payments">
+                    <div class="admin-view-heading"><div><span class="admin-eyebrow">Money movement</span><h2>Keep every payout accountable.</h2><p>Match PayPal donations to project ledgers, calculate the due amount and prepare the human-approved payout queue.</p></div><button class="admin-secondary-button" data-payment-action="export" type="button"><i class="bi bi-download"></i> Export ledger</button></div>
+                    <div class="ledger-summary"><div><span>Gross contributions</span><strong>$82,440.00</strong><small>This month</small></div><div><span>Platform reserve</span><strong>$8,244.00</strong><small>10% operating layer</small></div><div><span>Project payouts due</span><strong>$48,620.00</strong><small>18 approved projects</small></div><div><span>Reconciled events</span><strong>386</strong><small>0 unmatched</small></div></div>
+                    <article class="admin-panel table-panel"><div class="admin-panel-heading"><div><span class="admin-eyebrow">Settlement queue</span><h3>Recent project obligations</h3></div><span class="status-pill ready"><i class="bi bi-check-circle"></i> Ledger matched</span></div><div class="admin-table-wrap"><table class="admin-table payment-table"><thead><tr><th>Project</th><th>Community support</th><th>Gross</th><th>Reserve</th><th>Due to project</th><th>Status</th><th></th></tr></thead><tbody>
+                        <tr data-payment-row="blueloop"><td><strong>BlueLoop</strong><small>Nairobi, Kenya</small></td><td>312 contributions</td><td>$8,640.00</td><td>$864.00</td><td><strong>$7,776.00</strong></td><td><span class="status-pill pending">Pending board release</span></td><td><button class="table-action approve" data-payment-action="queue" type="button">Queue</button></td></tr>
+                        <tr data-payment-row="orbit-school"><td><strong>Orbit School</strong><small>Medellín, Colombia</small></td><td>184 contributions</td><td>$5,230.00</td><td>$523.00</td><td><strong>$4,707.00</strong></td><td><span class="status-pill ready">Approved to queue</span></td><td><button class="table-action approve" data-payment-action="queue" type="button">Queue</button></td></tr>
+                        <tr data-payment-row="solar-commons"><td><strong>Solar Commons</strong><small>Mombasa, Kenya</small></td><td>402 contributions</td><td>$14,200.00</td><td>$1,420.00</td><td><strong>$12,780.00</strong></td><td><span class="status-pill paid">Paid</span></td><td><span class="table-muted">Complete</span></td></tr>
+                    </tbody></table></div></article>
+                    <p class="admin-footnote"><i class="bi bi-shield-check"></i> Demo calculation only. The production ledger must be driven by PayPal webhooks and server-side authorization before funds are released.</p>
+                </section>
+
+                <section class="admin-view" data-admin-panel="completed">
+                    <div class="admin-view-heading"><div><span class="admin-eyebrow">The living record</span><h2>Projects that reached the future.</h2><p>Review impact, final reports and the public progress pages that show what the community helped make possible.</p></div><span class="admin-filter-label"><i class="bi bi-stars"></i> 24 completed</span></div>
+                    <div class="completed-grid"><article class="completed-card"><div class="completed-art art-solar"><span>GOAL REACHED</span><i class="bi bi-sun"></i></div><div><span class="admin-eyebrow">Energy / Community</span><h3>Solar Commons</h3><p>Community-owned solar charging hubs now serve three neighborhoods in Mombasa.</p><div class="completed-meta"><span>14,200 iB signal</span><strong>100%</strong></div><a href="invest-in-inbest.html" class="admin-card-button">Open final report <i class="bi bi-arrow-up-right"></i></a></div></article><article class="completed-card"><div class="completed-art art-makers"><span>GOAL REACHED</span><i class="bi bi-lightbulb"></i></div><div><span class="admin-eyebrow">Education / Access</span><h3>Makers of Tomorrow</h3><p>A shared workshop gives local makers tools, training and a place to teach.</p><div class="completed-meta"><span>9,800 iB signal</span><strong>100%</strong></div><button class="admin-card-button" data-project-action="report" type="button">Open final report <i class="bi bi-arrow-up-right"></i></button></div></article><article class="completed-card"><div class="completed-art art-water"><span>GOAL REACHED</span><i class="bi bi-droplet-half"></i></div><div><span class="admin-eyebrow">Water / Climate</span><h3>River Rooms</h3><p>Local water stewards are restoring a shared watershed through open monitoring.</p><div class="completed-meta"><span>18,420 iB signal</span><strong>100%</strong></div><button class="admin-card-button" data-project-action="report" type="button">Open final report <i class="bi bi-arrow-up-right"></i></button></div></article></div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/admin-config.js"></script>
+    <script src="js/coin-mark.js"></script>
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>

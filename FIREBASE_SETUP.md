@@ -44,6 +44,19 @@ users/{uid}/support/{projectId}
 
 Do not trust client-side balances. PayPal webhooks and a server-side transaction ledger must be the source of truth before real money or iB Coins are enabled.
 
-## 4. Local preview
+## 4. Admin Console
+
+The private management console is available at `/admin` (the static file is `admin.html`) and includes preview views for:
+
+- ElevenLabs agent supervision and intake sessions
+- board project review and approval actions
+- PayPal contribution reconciliation and project payout obligations
+- completed projects and final reports
+
+Copy `js/admin-config.example.js` to `js/admin-config.js` and replace the example address with approved team emails for the interface gate. For production, also set a Firebase custom claim such as `{ admin: true }` or `{ manager: true }` from a trusted server. Firestore rules and API routes must enforce that claim; the browser email list is only a convenience gate and is not a security boundary.
+
+Keep ElevenLabs private keys and PayPal secrets in Vercel server-side environment variables. The browser should receive only short-lived signed URLs or server responses.
+
+## 5. Local preview
 
 The committed placeholder config keeps the Dashboard in Preview mode. Replace its values to activate Firebase. Do not put PayPal or AI secrets in this browser configuration.
