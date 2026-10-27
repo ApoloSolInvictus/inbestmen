@@ -25,9 +25,7 @@ document.getElementById('emailSignIn').addEventListener('submit', async (event) 
     try { const result = await signInWithEmailAndPassword(auth, email, password); goToDashboard(result.user); } catch (error) { showStatus(error.message || 'Email sign-in could not be completed.', true); }
 });
 
-document.getElementById('createAccount').addEventListener('click', async () => {
-    if (!auth) return showStatus('Firebase is not connected yet. Add your Web App configuration first.');
-    const email = document.getElementById('email').value.trim(); const password = document.getElementById('password').value;
-    if (!email || password.length < 6) return showStatus('Enter an email and a password with at least 6 characters.');
-    try { const result = await createUserWithEmailAndPassword(auth, email, password); await updateProfile(result.user, { displayName: email.split('@')[0] }); goToDashboard(result.user); } catch (error) { showStatus(error.message || 'Account creation could not be completed.', true); }
+document.getElementById('guestSignIn').addEventListener('click', () => {
+    localStorage.setItem('inbestmen_user', JSON.stringify({ name: 'Guest Member', email: 'Preview mode' }));
+    window.location.href = 'dashboard.html';
 });

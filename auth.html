@@ -20,6 +20,7 @@
             <h1>Welcome back to a world of better ideas.</h1>
             <p class="auth-copy">Sign in to manage your iB Coins, support projects and follow the future you are helping build.</p>
             <button id="googleSignIn" class="social-signin" type="button"><span class="google-g">G</span> Continue with Google</button>
+            <button id="guestSignIn" class="guest-signin" type="button"><i class="bi bi-eye"></i> Continue as guest</button>
             <div class="auth-divider"><span>or use your email</span></div>
             <form id="emailSignIn" class="auth-form">
                 <label for="email">Email address</label><input id="email" type="email" autocomplete="email" placeholder="you@example.com" required>
@@ -27,8 +28,8 @@
                 <button class="btn btn-primary w-100" type="submit">Enter my dashboard <span>→</span></button>
             </form>
             <p id="authStatus" class="auth-status" role="status"></p>
-            <p class="auth-footnote">New to inBestmen? <button id="createAccount" type="button">Create an account</button></p>
-            <p class="auth-legal">By continuing, you agree to the inBestmen Terms and Privacy Policy.</p>
+            <p class="auth-footnote">New to inBestmen? <a href="register.html">Create an account</a> · <a href="forgot-password.html">Forgot password?</a></p>
+            <p class="auth-legal">By continuing, you agree to the <a href="terms.html">Terms of Service</a> and <a href="privacy.html">Privacy Policy</a>.</p>
         </section>
     </main>
     <script src="js/firebase-config.js"></script>
