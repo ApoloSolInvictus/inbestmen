@@ -57,6 +57,24 @@ Copy `js/admin-config.example.js` to `js/admin-config.js` and replace the exampl
 
 Keep ElevenLabs private keys and PayPal secrets in Vercel server-side environment variables. The browser should receive only short-lived signed URLs or server responses.
 
-## 5. Local preview
+## 5. ElevenLabs voice intake calls
+
+The public “Submit an idea” form now collects the founder's email, E.164 phone number, preferred call language and explicit call consent. It posts to `/api/elevenlabs/outbound-call`; the server calls ElevenLabs and never exposes `ELEVENLABS_API_KEY` to the browser.
+
+Configure an ElevenLabs Conversational AI agent with a Twilio phone number imported and assigned to that agent. Add these Vercel environment variables:
+
+```text
+ELEVENLABS_API_KEY=
+ELEVENLABS_AGENT_ID=
+ELEVENLABS_AGENT_PHONE_NUMBER_ID=
+ELEVENLABS_ENVIRONMENT=production
+ELEVENLABS_CALL_RECORDING_ENABLED=false
+```
+
+The outbound request passes these dynamic variables to the agent: `project_name`, `founder_name`, `contact_email`, `contact_phone`, `project_location`, `project_category`, `project_idea`, `preferred_language` and `preferred_language_code`, and applies the selected base language to the conversation configuration. The agent voice and model must support the languages enabled in the form. Add instructions in the agent prompt to conduct the complete intake in `{{preferred_language}}`, ask the predetermined questions, never promise funding, and confirm that the founder is ready before ending the call.
+
+The endpoint uses ElevenLabs' native Twilio outbound-call API, which requires an agent ID, imported phone-number ID and destination number. See the [official outbound-call reference](https://elevenlabs.io/docs/api-reference/integrations/twilio/outbound-call). Add rate limiting, abuse protection and jurisdiction-specific consent review before opening outbound calling to unrestricted public traffic.
+
+## 6. Local preview
 
 The committed placeholder config keeps the Dashboard in Preview mode. Replace its values to activate Firebase. Do not put PayPal or AI secrets in this browser configuration.

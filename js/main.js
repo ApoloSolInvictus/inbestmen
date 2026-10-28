@@ -57,27 +57,62 @@
         });
     });
 
+    const languageLabels = {
+        'en-US': 'English',
+        'es-ES': 'Spanish',
+        'pt-BR': 'Portuguese',
+        'fr-FR': 'French',
+        'de-DE': 'German',
+        'it-IT': 'Italian',
+        'ja-JP': 'Japanese',
+        'zh-CN': 'Mandarin Chinese'
+    };
+
+    const normalizePhone = (value) => String(value || '').replace(/[\s().-]/g, '');
+    const maskPhone = (value) => value.length > 4 ? `${value.slice(0, 3)}•••${value.slice(-4)}` : value;
+
     projectForm?.addEventListener('submit', async function (event) {
         event.preventDefault();
-        formStatus.className = 'form-status show info';
-        formStatus.textContent = 'Preparing your structured project brief…';
         submitButton.disabled = true;
-
         const payload = Object.fromEntries(new FormData(projectForm).entries());
+        payload.phoneNumber = normalizePhone(payload.phoneNumber);
+        payload.callConsent = payload.callConsent === 'true';
+
+        if (!/^\+[1-9]\d{7,14}$/.test(payload.phoneNumber)) {
+            formStatus.className = 'form-status show error';
+            formStatus.textContent = 'Please enter a valid phone number with country code, for example +1 555 123 4567.';
+            submitButton.disabled = false;
+            return;
+        }
+
+        formStatus.className = 'form-status show info';
+        formStatus.textContent = 'Connecting your project to the voice intake agent…';
+
         try {
-            const response = await fetch('/api/ai/screen-project', {
+            const response = await fetch('/api/elevenlabs/outbound-call', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'The screening service is not configured yet.');
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result.success === false) {
+                const error = new Error(result.error || 'The voice intake service could not start the call.');
+                error.code = result.code;
+                throw error;
+            }
+
+            const language = languageLabels[payload.preferredLanguage] || 'your selected language';
             formStatus.className = 'form-status show success';
-            formStatus.textContent = 'Your project brief is ready for the next review stage.';
+            formStatus.textContent = `Your intake request is ready. An ElevenLabs agent will call ${maskPhone(payload.phoneNumber)} in ${language}.`;
             projectForm.reset();
-        } catch (_error) {
-            formStatus.className = 'form-status show info';
-            formStatus.textContent = 'Preview mode: the intake form is ready. Connect OPENAI_API_KEY and ELEVENLABS_API_KEY in Vercel to activate AI screening.';
+        } catch (error) {
+            if (error.code === 'ELEVENLABS_NOT_CONFIGURED') {
+                formStatus.className = 'form-status show info';
+                formStatus.textContent = 'Preview mode: your intake form is ready. Add the ElevenLabs API, agent and phone number IDs in Vercel to activate outbound calls.';
+            } else {
+                formStatus.className = 'form-status show error';
+                formStatus.textContent = error.message || 'The voice intake service could not be reached. Please try again.';
+            }
         } finally {
             submitButton.disabled = false;
         }
