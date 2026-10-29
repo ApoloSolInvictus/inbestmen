@@ -159,8 +159,25 @@ h1, h2, h3, strong { font-family: 'Space Grotesk', sans-serif; }
 .brief-document-summary p, .brief-document-summary li { color: var(--admin-muted); font-size: 10px; line-height: 1.6; margin: 0; }
 .brief-document-summary ul { margin: 0; padding-left: 17px; }
 .brief-document-content { background: var(--admin-ink); border-radius: 10px; color: #dffefa; font-family: 'DM Mono', monospace; font-size: 10px; line-height: 1.6; margin: 0; max-height: 650px; overflow: auto; padding: 16px; white-space: pre-wrap; word-break: break-word; }
+.table-action.remove { background: #fff0ee; color: #a24e46; }
+.live-brief-remove { margin-top: 12px; }
+.brief-document-section { border-top: 1px solid var(--admin-line); margin-top: 18px; padding-top: 18px; }
+.brief-document-section-heading h4 { font-size: 18px; letter-spacing: -.05em; margin: 8px 0 14px; }
+.brief-document-facts { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+.brief-document-facts > div { background: var(--admin-paper); border-radius: 9px; min-width: 0; padding: 12px; }
+.brief-document-facts span { color: var(--admin-muted); display: block; font-family: 'DM Mono', monospace; font-size: 8px; margin-bottom: 5px; text-transform: uppercase; }
+.brief-document-facts strong { display: block; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.brief-document-transcript { background: var(--admin-ink); border-radius: 10px; color: #dffefa; max-height: 440px; overflow: auto; padding: 6px 16px; }
+.brief-document-transcript > div { border-bottom: 1px solid rgba(223,254,250,.14); padding: 12px 0; }
+.brief-document-transcript > div:last-child { border-bottom: 0; }
+.brief-document-transcript span { color: var(--admin-cyan); display: block; font-family: 'DM Mono', monospace; font-size: 8px; text-transform: uppercase; }
+.brief-document-transcript p { font-size: 11px; line-height: 1.65; margin: 5px 0 0; white-space: pre-wrap; }
+.brief-document-muted { color: var(--admin-muted); font-size: 10px; padding: 12px 0; }
+.brief-document-raw { border-top: 1px solid var(--admin-line); margin-top: 18px; padding-top: 18px; }
+.brief-document-raw summary { color: #159c98; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; }
+.brief-document-raw pre { margin-top: 14px; }
 @media (max-width: 1000px) { .admin-live-operations { grid-template-columns: 1fr; }.live-agent-panel { grid-column: auto; } }
-@media (max-width: 700px) { .brief-document-meta, .brief-document-summary { grid-template-columns: 1fr 1fr; }.brief-document-actions { justify-content: flex-start; } }
-@media (max-width: 600px) { .live-agent-meta { grid-template-columns: 1fr; }.live-panel-actions { align-items: flex-end; flex-direction: column; gap: 8px; }.admin-live-operations .admin-panel { padding: 17px; }.live-brief-actions { align-items: flex-end; flex-direction: column; }.brief-document-meta, .brief-document-summary { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .brief-document-meta, .brief-document-summary { grid-template-columns: 1fr 1fr; }.brief-document-facts { grid-template-columns: 1fr 1fr; }.brief-document-actions { justify-content: flex-start; } }
+@media (max-width: 600px) { .live-agent-meta { grid-template-columns: 1fr; }.live-panel-actions { align-items: flex-end; flex-direction: column; gap: 8px; }.admin-live-operations .admin-panel { padding: 17px; }.live-brief-actions { align-items: flex-end; flex-direction: column; }.brief-document-meta, .brief-document-summary, .brief-document-facts { grid-template-columns: 1fr; }.brief-document-actions { align-items: flex-start; flex-direction: column; } }
 @media print { body { background: #fff; }.admin-sidebar, .admin-header, .admin-demo-banner, .brief-document-actions, .conversation-detail, .admin-footnote, .admin-toast { display: none !important; }.admin-shell, .admin-main, .admin-content, .brief-document { background: #fff; display: block; margin: 0; max-width: none; padding: 0; }.brief-document[hidden] { display: block !important; }.brief-document-summary > div, .brief-document-meta span { break-inside: avoid; }.brief-document-content { color: #111; max-height: none; overflow: visible; white-space: pre-wrap; }
 }

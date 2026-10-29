@@ -93,7 +93,7 @@ const renderReviewQueue = (briefs) => {
         const id = String(brief.id || brief.conversationId || '');
         const goal = typeof project.budgetUsd === 'number' && project.budgetUsd > 0 ? `$${project.budgetUsd.toLocaleString()}` : 'Not captured';
         const statusClass = brief.status === 'pending_human_review' ? 'review' : 'priority';
-        return `<tr><td><div class="table-project"><span class="table-project-mark cyan"><i class="bi bi-file-earmark-text"></i></span><div><strong>${escapeHtml(project.name || 'Unnamed project')}</strong><small>${escapeHtml(project.category || 'Category not captured')}</small></div></div></td><td>${escapeHtml(founder.name || 'Founder not captured')}<br><small>${escapeHtml(project.location || 'Location not captured')}</small></td><td><span class="status-pill ${statusClass}">${escapeHtml(brief.status || 'needs_more_information')}</span><small>${escapeHtml(review.qualityScore ?? '—')}/100 score</small></td><td><strong>${escapeHtml(goal)}</strong></td><td><button class="table-link" data-brief-id="${escapeHtml(id)}" type="button">Open packet</button></td></tr>`;
+        return `<tr><td><div class="table-project"><span class="table-project-mark cyan"><i class="bi bi-file-earmark-text"></i></span><div><strong>${escapeHtml(project.name || 'Unnamed project')}</strong><small>${escapeHtml(project.category || 'Category not captured')}</small></div></div></td><td>${escapeHtml(founder.name || 'Founder not captured')}<br><small>${escapeHtml(project.location || 'Location not captured')}</small></td><td><span class="status-pill ${statusClass}">${escapeHtml(brief.status || 'needs_more_information')}</span><small>${escapeHtml(review.qualityScore ?? '—')}/100 score</small></td><td><strong>${escapeHtml(goal)}</strong></td><td><div class="table-actions"><button class="table-link" data-open-brief-id="${escapeHtml(id)}" type="button">Open packet</button><button class="table-action remove" data-delete-brief-id="${escapeHtml(id)}" type="button" aria-label="Remove ${escapeHtml(project.name || 'project')} from the dashboard">Remove</button></div></td></tr>`;
     }).join('');
 };
 
@@ -126,13 +126,47 @@ const renderBriefs = (data) => {
     state.textContent = 'Structured briefs captured by ElevenLabs, screened by OpenAI and stored in Firestore.';
     list.innerHTML = briefs.map((brief) => {
         const briefId = String(brief.id || brief.conversationId || '');
-        return `<div class="live-brief-item"><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong><small>${escapeHtml(brief.founder?.name || 'Founder not captured')} · ${escapeHtml(brief.project?.location || 'Location not captured')}</small><span>${escapeHtml(brief.status || 'pending_human_review')} · ${escapeHtml(formatDate(brief.capturedAt))}</span><em>${escapeHtml(brief.aiReview?.summary || 'OpenAI screening summary not available.')}</em><button class="admin-secondary-button live-brief-open" data-brief-id="${escapeHtml(briefId)}" type="button"><i class="bi bi-file-earmark-text"></i> Open board packet</button></div>`;
+        return `<div class="live-brief-item"><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong><small>${escapeHtml(brief.founder?.name || 'Founder not captured')} · ${escapeHtml(brief.project?.location || 'Location not captured')}</small><span>${escapeHtml(brief.status || 'pending_human_review')} · ${escapeHtml(formatDate(brief.capturedAt))}</span><em>${escapeHtml(brief.aiReview?.summary || 'OpenAI screening summary not available.')}</em><div class="live-brief-actions"><button class="admin-secondary-button live-brief-open" data-open-brief-id="${escapeHtml(briefId)}" type="button"><i class="bi bi-file-earmark-text"></i> Open board packet</button><button class="admin-secondary-button admin-danger-button live-brief-remove" data-delete-brief-id="${escapeHtml(briefId)}" type="button"><i class="bi bi-trash3"></i> Remove</button></div></div>`;
     }).join('');
 };
 
 const renderList = (items, emptyLabel = 'None recorded.') => {
-    const values = Array.isArray(items) ? items.filter(Boolean) : [];
+    const values = Array.isArray(items) ? items.filter(Boolean) : items ? [items] : [];
     return values.length ? `<ul>${values.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : `<p>${escapeHtml(emptyLabel)}</p>`;
+};
+
+const renderFacts = (brief) => {
+    const founder = brief.founder || {};
+    const project = brief.project || {};
+    const fields = [
+        ['Founder', founder.name || 'Founder not captured'],
+        ['Email', founder.email || 'Email not captured'],
+        ['Telegram username', founder.telegramUsername || 'Not captured'],
+        ['Telegram chat ID', founder.telegramChatId || 'Not captured'],
+        ['Project name', project.name || 'Unnamed project'],
+        ['Location', project.location || 'Location not captured'],
+        ['Category', project.category || 'Category not captured'],
+        ['Funding goal', typeof project.budgetUsd === 'number' ? `$${project.budgetUsd.toLocaleString()} USD` : 'Not captured'],
+        ['Stage', project.stage || 'Not captured'],
+        ['Timeline', project.timeline || 'Not captured'],
+        ['Beneficiaries', project.beneficiaries || 'Not captured'],
+        ['Team', project.team || 'Not captured'],
+        ['Problem', project.problem || 'Not captured'],
+        ['Proposed solution', project.proposedSolution || 'Not captured'],
+        ['Expected impact', project.impact || 'Not captured'],
+        ['Founder-provided risks', project.risks || 'Not captured']
+    ];
+    return fields.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+};
+
+const renderTranscript = (transcript) => {
+    const turns = Array.isArray(transcript) ? transcript : [];
+    if (!turns.length) return '<p class="brief-document-muted">No transcript was captured in this packet.</p>';
+    return turns.map((turn) => {
+        const speaker = turn.role || turn.speaker || turn.source || 'Participant';
+        const message = turn.message || turn.text || turn.content || turn.transcript || '';
+        return `<div><span>${escapeHtml(speaker)}</span><p>${escapeHtml(message || '—')}</p></div>`;
+    }).join('');
 };
 
 const openBriefDocument = (briefId) => {
@@ -144,10 +178,33 @@ const openBriefDocument = (briefId) => {
     document.getElementById('briefDocumentTitle').textContent = project.name || 'Project brief';
     document.getElementById('briefDocumentMeta').innerHTML = `<span><strong>Status</strong>${escapeHtml(brief.status || '—')}</span><span><strong>Quality score</strong>${escapeHtml(review.qualityScore ?? '—')}/100</span><span><strong>Captured</strong>${escapeHtml(formatDate(brief.capturedAt))}</span><span><strong>Conversation</strong>${escapeHtml(brief.conversationId || '—')}</span>`;
     document.getElementById('briefDocumentSummary').innerHTML = `<div><h4>Board summary</h4><p>${escapeHtml(review.summary || brief.review?.summary || 'No screening summary was returned.')}</p></div><div><h4>Strengths</h4>${renderList(review.strengths)}</div><div><h4>Information still needed</h4>${renderList(review.missingInformation)}</div><div><h4>Risk flags</h4>${renderList(review.riskFlags)}</div>`;
+    document.getElementById('briefDocumentFacts').innerHTML = renderFacts(brief);
+    document.getElementById('briefDocumentTranscript').innerHTML = renderTranscript(brief.transcript);
     document.getElementById('briefDocumentContent').textContent = JSON.stringify(brief, null, 2);
     const panel = document.getElementById('briefDocument');
+    setView('reviews');
     panel.hidden = false;
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const deleteStoredBrief = async (briefId, trigger = null) => {
+    const brief = briefRecords.get(String(briefId));
+    if (!brief) return showToast('That project brief is no longer in the current list. Refresh the live data.');
+    const projectName = brief.project?.name || 'this project brief';
+    if (!window.confirm(`Remove “${projectName}” from the Admin dashboard? The original ElevenLabs conversation will remain in ElevenLabs.`)) return;
+    if (trigger) trigger.disabled = true;
+    try {
+        const data = await apiFetch('/api/projects/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: brief.id || brief.conversationId, confirmation: 'DELETE' }) });
+        if (selectedBrief && String(selectedBrief.id || selectedBrief.conversationId) === String(briefId)) {
+            selectedBrief = null;
+            document.getElementById('briefDocument').hidden = true;
+        }
+        showToast(data.deleted === false ? 'The brief was already removed from the dashboard.' : `${projectName} was removed from the dashboard.`);
+        await loadLiveOperations();
+    } catch (error) {
+        showToast(error.message || 'The project brief could not be removed.');
+        if (trigger) trigger.disabled = false;
+    }
 };
 
 const syncRecentCalls = async () => {
@@ -309,6 +366,7 @@ document.getElementById('closeConversationDetail').addEventListener('click', () 
 document.getElementById('closeBriefDocument').addEventListener('click', () => { document.getElementById('briefDocument').hidden = true; });
 document.getElementById('downloadBriefJson').addEventListener('click', downloadBriefJson);
 document.getElementById('printBriefDocument').addEventListener('click', () => window.print());
+document.getElementById('deleteBriefDocument').addEventListener('click', (event) => { if (selectedBrief) deleteStoredBrief(selectedBrief.id || selectedBrief.conversationId, event.currentTarget); });
 
 const setView = (view) => {
     document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.adminPanel === view));
@@ -328,8 +386,19 @@ document.addEventListener('click', (event) => {
     const liveConversationButton = event.target.closest('[data-live-conversation]');
     if (liveConversationButton) openConversation(liveConversationButton.dataset.liveConversation);
 
-    const briefButton = event.target.closest('[data-brief-id]');
-    if (briefButton) openBriefDocument(briefButton.dataset.briefId);
+    const briefButton = event.target.closest('[data-open-brief-id]');
+    if (briefButton) {
+        event.preventDefault();
+        openBriefDocument(briefButton.dataset.openBriefId);
+        return;
+    }
+
+    const deleteButton = event.target.closest('[data-delete-brief-id]');
+    if (deleteButton) {
+        event.preventDefault();
+        deleteStoredBrief(deleteButton.dataset.deleteBriefId, deleteButton);
+        return;
+    }
 
     const reviewButton = event.target.closest('[data-review-action]');
     if (reviewButton) {

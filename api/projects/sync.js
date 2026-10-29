@@ -1,6 +1,6 @@
 import { requireAdmin } from '../_lib/auth.js';
 import { fetchElevenLabs, getElevenLabsAgentId } from '../_lib/elevenlabs.js';
-import { storeProjectBrief, listProjectBriefs, getProjectSyncBaseline } from '../_lib/firestore.js';
+import { storeProjectBrief, listProjectBriefs, getIgnoredProjectBriefIds, getProjectSyncBaseline } from '../_lib/firestore.js';
 import { screenProjectBrief } from '../_lib/openai.js';
 import { buildProjectBrief } from '../_lib/project-brief.js';
 
@@ -14,15 +14,20 @@ export default async function handler(request, response) {
     const limit = Math.min(10, Math.max(1, Number(request.query?.limit || 10)));
 
     try {
-        const [conversationPage, storedBriefs, baseline] = await Promise.all([
+        const [conversationPage, storedBriefs, baseline, ignoredConversationIds] = await Promise.all([
             fetchElevenLabs(`/convai/conversations?${new URLSearchParams({ agent_id: getElevenLabsAgentId(), page_size: String(limit), summary_mode: 'include', sort_direction: 'desc' })}`),
             listProjectBriefs(100),
-            getProjectSyncBaseline()
+            getProjectSyncBaseline(),
+            getIgnoredProjectBriefIds()
         ]);
         const storedIds = new Set(storedBriefs.map((brief) => cleanId(brief.conversationId)).filter(Boolean));
+        const ignoredIds = new Set(ignoredConversationIds);
         const baselineSeconds = baseline ? new Date(baseline).getTime() / 1000 : 0;
         const allConversations = conversationPage.conversations || [];
-        const conversations = allConversations.filter((conversation) => !baselineSeconds || conversationTimestamp(conversation) > baselineSeconds);
+        const conversations = allConversations.filter((conversation) => {
+            const conversationId = cleanId(conversation.conversation_id || conversation.id);
+            return !ignoredIds.has(conversationId) && (!baselineSeconds || conversationTimestamp(conversation) > baselineSeconds);
+        });
         const results = [];
 
         for (const item of conversations) {
@@ -54,7 +59,7 @@ export default async function handler(request, response) {
             }
         }
 
-        response.status(200).json({ ok: true, agentId: getElevenLabsAgentId(), requested: conversations.length, ignoredBefore: baseline || null, results });
+        response.status(200).json({ ok: true, agentId: getElevenLabsAgentId(), requested: conversations.length, ignoredBefore: baseline || null, ignoredCalls: ignoredIds.size, results });
     } catch (error) {
         response.status(error.statusCode || 503).json({ error: error.message || 'Recent ElevenLabs conversations could not be synchronized.' });
     }

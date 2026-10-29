@@ -142,6 +142,8 @@ For future conversations, keep the `post_call_transcription` webhook enabled wit
 
 The board packet shown in the admin console includes the structured JSON, transcript metadata, AI review and screening status. It is an operational evidence document only. A licensed accountant and qualified legal counsel must validate tax, accounting, securities, privacy and regulatory conclusions before any investor presentation, fundraising or payout.
 
+From **Project review**, **Open packet** displays the board summary, captured founder/project fields, ElevenLabs transcript and the complete source JSON. **Remove from list** deletes only the stored Firestore brief and records its conversation ID as ignored, so a later Sync calls action will not re-import it. The original ElevenLabs conversation is preserved in ElevenLabs for audit history.
+
 ## 11. Local preview
 
 The committed placeholder config keeps the Dashboard in Preview mode. Replace its values to activate Firebase. Do not put PayPal or AI secrets in this browser configuration.

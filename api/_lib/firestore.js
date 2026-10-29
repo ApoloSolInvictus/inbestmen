@@ -80,6 +80,16 @@ export const listProjectBriefs = async (limit = 50) => {
     return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...Object.fromEntries(Object.entries(document.fields || {}).map(([key, value]) => [key, fromFirestoreValue(value)])) }));
 };
 
+export const deleteProjectBrief = async (documentId) => {
+    const safeId = String(documentId || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 150) throw Object.assign(new Error('A valid project brief id is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const response = await fetch(documentUrl(account.projectId, safeId), { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    if (response.status === 404) return { deleted: false };
+    if (!response.ok) throw new Error(`Firestore could not delete the project brief (${response.status}).`);
+    return { deleted: true };
+};
+
 export const deleteAllProjectBriefs = async () => {
     const { account, token } = await getAccessToken();
     let deleted = 0;
@@ -106,6 +116,34 @@ export const getProjectSyncBaseline = async () => {
     const data = await response.json();
     if (!response.ok) throw new Error(`Firestore could not read the intake baseline (${response.status}).`);
     return fromFirestoreValue(data.fields?.resetAt) || null;
+};
+
+export const getIgnoredProjectBriefIds = async () => {
+    const { account, token } = await getAccessToken();
+    const response = await fetch(stateDocumentUrl(account.projectId, 'ignoredCalls'), { headers: { Authorization: `Bearer ${token}` } });
+    if (response.status === 404) return [];
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Firestore could not read ignored project briefs (${response.status}).`);
+    const ids = fromFirestoreValue(data.fields?.conversationIds);
+    return Array.isArray(ids) ? ids.map((id) => String(id)) : [];
+};
+
+export const addIgnoredProjectBriefId = async (conversationId) => {
+    const safeId = String(conversationId || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 150) throw Object.assign(new Error('A valid project brief id is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const response = await fetch(stateDocumentUrl(account.projectId, 'ignoredCalls'), { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok && response.status !== 404) throw new Error(`Firestore could not read ignored project briefs (${response.status}).`);
+    const data = response.status === 404 ? {} : await response.json();
+    const current = fromFirestoreValue(data.fields?.conversationIds);
+    const conversationIds = Array.from(new Set([...(Array.isArray(current) ? current.map((id) => String(id)) : []), safeId]));
+    const saveResponse = await fetch(stateDocumentUrl(account.projectId, 'ignoredCalls'), {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { conversationIds: toFirestoreValue(conversationIds), updatedAt: toFirestoreValue(new Date().toISOString()) } })
+    });
+    if (!saveResponse.ok) throw new Error(`Firestore could not save ignored project briefs (${saveResponse.status}).`);
+    return conversationIds;
 };
 
 export const setProjectSyncBaseline = async (resetAt = new Date().toISOString()) => {
