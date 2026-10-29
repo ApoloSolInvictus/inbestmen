@@ -178,7 +178,7 @@ const clearStoredBriefs = async () => {
         const data = await apiFetch('/api/projects/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation }) });
         selectedBrief = null;
         document.getElementById('briefDocument').hidden = true;
-        showToast(`${data.deleted || 0} stored project brief${data.deleted === 1 ? '' : 's'} deleted.`);
+        showToast(`${data.deleted || 0} stored project brief${data.deleted === 1 ? '' : 's'} deleted. New intake baseline set.`);
         await loadLiveOperations();
     } catch (error) {
         showToast(error.message || 'Stored project briefs could not be deleted.');

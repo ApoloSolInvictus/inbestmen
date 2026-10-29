@@ -59,7 +59,9 @@ const fromFirestoreValue = (value) => {
     return value;
 };
 
-const documentUrl = (projectId, documentId = '') => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/elevenlabsProjectBriefs${documentId ? `/${encodeURIComponent(documentId)}` : ''}`;
+const collectionUrl = (projectId, collection, documentId = '') => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/${collection}${documentId ? `/${encodeURIComponent(documentId)}` : ''}`;
+const documentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'elevenlabsProjectBriefs', documentId);
+const stateDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'inbestmenAdminState', documentId);
 
 export const storeProjectBrief = async (brief) => {
     const { account, token } = await getAccessToken();
@@ -95,4 +97,24 @@ export const deleteAllProjectBriefs = async () => {
         }
     }
     return { deleted };
+};
+
+export const getProjectSyncBaseline = async () => {
+    const { account, token } = await getAccessToken();
+    const response = await fetch(stateDocumentUrl(account.projectId, 'intake'), { headers: { Authorization: `Bearer ${token}` } });
+    if (response.status === 404) return null;
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Firestore could not read the intake baseline (${response.status}).`);
+    return fromFirestoreValue(data.fields?.resetAt) || null;
+};
+
+export const setProjectSyncBaseline = async (resetAt = new Date().toISOString()) => {
+    const { account, token } = await getAccessToken();
+    const response = await fetch(stateDocumentUrl(account.projectId, 'intake'), {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { resetAt: toFirestoreValue(resetAt), updatedAt: toFirestoreValue(new Date().toISOString()) } })
+    });
+    if (!response.ok) throw new Error(`Firestore could not save the intake baseline (${response.status}).`);
+    return resetAt;
 };

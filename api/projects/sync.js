@@ -1,10 +1,11 @@
 import { requireAdmin } from '../_lib/auth.js';
 import { fetchElevenLabs, getElevenLabsAgentId } from '../_lib/elevenlabs.js';
-import { storeProjectBrief, listProjectBriefs } from '../_lib/firestore.js';
+import { storeProjectBrief, listProjectBriefs, getProjectSyncBaseline } from '../_lib/firestore.js';
 import { screenProjectBrief } from '../_lib/openai.js';
 import { buildProjectBrief } from '../_lib/project-brief.js';
 
 const cleanId = (value) => String(value || '').trim();
+const conversationTimestamp = (conversation) => Number(conversation.end_time_unix_secs || conversation.start_time_unix_secs || 0);
 
 export default async function handler(request, response) {
     if (request.method !== 'POST') return response.status(405).json({ error: 'Method not allowed' });
@@ -13,12 +14,15 @@ export default async function handler(request, response) {
     const limit = Math.min(10, Math.max(1, Number(request.query?.limit || 10)));
 
     try {
-        const [conversationPage, storedBriefs] = await Promise.all([
+        const [conversationPage, storedBriefs, baseline] = await Promise.all([
             fetchElevenLabs(`/convai/conversations?${new URLSearchParams({ agent_id: getElevenLabsAgentId(), page_size: String(limit), summary_mode: 'include', sort_direction: 'desc' })}`),
-            listProjectBriefs(100)
+            listProjectBriefs(100),
+            getProjectSyncBaseline()
         ]);
         const storedIds = new Set(storedBriefs.map((brief) => cleanId(brief.conversationId)).filter(Boolean));
-        const conversations = conversationPage.conversations || [];
+        const baselineSeconds = baseline ? new Date(baseline).getTime() / 1000 : 0;
+        const allConversations = conversationPage.conversations || [];
+        const conversations = allConversations.filter((conversation) => !baselineSeconds || conversationTimestamp(conversation) > baselineSeconds);
         const results = [];
 
         for (const item of conversations) {
@@ -50,7 +54,7 @@ export default async function handler(request, response) {
             }
         }
 
-        response.status(200).json({ ok: true, agentId: getElevenLabsAgentId(), requested: conversations.length, results });
+        response.status(200).json({ ok: true, agentId: getElevenLabsAgentId(), requested: conversations.length, ignoredBefore: baseline || null, results });
     } catch (error) {
         response.status(error.statusCode || 503).json({ error: error.message || 'Recent ElevenLabs conversations could not be synchronized.' });
     }

@@ -1,5 +1,5 @@
 import { requireAdmin } from '../_lib/auth.js';
-import { deleteAllProjectBriefs } from '../_lib/firestore.js';
+import { deleteAllProjectBriefs, setProjectSyncBaseline } from '../_lib/firestore.js';
 
 export default async function handler(request, response) {
     if (request.method !== 'POST') return response.status(405).json({ error: 'Method not allowed' });
@@ -12,7 +12,8 @@ export default async function handler(request, response) {
 
     try {
         const result = await deleteAllProjectBriefs();
-        response.status(200).json({ ok: true, ...result });
+        const resetAt = await setProjectSyncBaseline();
+        response.status(200).json({ ok: true, ...result, resetAt });
     } catch (error) {
         response.status(error.statusCode || 503).json({ error: error.message || 'Stored project briefs could not be deleted.' });
     }
