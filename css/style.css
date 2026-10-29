@@ -117,8 +117,10 @@ h1, h2, h3, p { margin-top: 0; }
 .agent-widget-heading p { color: rgba(255,255,255,.68); font-size: 12px; line-height: 1.7; margin: 0; max-width: 510px; }
 .agent-widget-status { color: #c9ed6a; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 .agent-widget-status i { font-size: 7px; margin-right: 4px; }
-.agent-widget-panel elevenlabs-convai { display: block; margin: 22px auto 0; max-width: 560px; min-height: 150px; position: relative; z-index: 1; }
+.agent-widget-panel #inbestmenAgentWidget { align-items: center; display: flex; justify-content: center; margin: 22px auto 0; min-height: 300px; position: relative; width: 100%; z-index: 1; }
+.agent-widget-panel elevenlabs-convai { display: block; height: 300px; margin: 0 auto; max-width: 640px; min-height: 300px; position: relative; width: 100%; }
 .agent-widget-loading { align-items: center; border: 1px dashed rgba(46,216,208,.45); border-radius: 13px; color: rgba(255,255,255,.65); display: flex; font-family: 'DM Mono', monospace; font-size: 10px; justify-content: center; margin: 22px auto 0; max-width: 560px; min-height: 112px; padding: 18px; position: relative; text-align: center; z-index: 1; }
+.agent-widget-error { color: rgba(255,255,255,.72); font-family: 'DM Mono', monospace; font-size: 10px; line-height: 1.6; margin: 0 auto; max-width: 520px; text-align: center; }
 .agent-widget-note { color: rgba(255,255,255,.48); font-family: 'DM Mono', monospace; font-size: 9px; margin: 16px 0 0; position: relative; text-align: center; z-index: 1; }
 .agent-widget-note i { color: #2ed8d0; margin-right: 4px; }
-@media (max-width: 575.98px) { .agent-widget-heading { display: block; }.agent-widget-status { display: inline-block; margin-top: 15px; }.agent-widget-panel elevenlabs-convai { min-height: 130px; } }
+@media (max-width: 575.98px) { .agent-widget-heading { display: block; }.agent-widget-status { display: inline-block; margin-top: 15px; }.agent-widget-panel #inbestmenAgentWidget { min-height: 260px; }.agent-widget-panel elevenlabs-convai { height: 260px; min-height: 260px; } }
