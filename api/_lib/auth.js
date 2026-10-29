@@ -57,6 +57,23 @@ const verifyFirebaseToken = async (token) => {
     return payload;
 };
 
+export const requireUser = async (request, response) => {
+    const authorization = getHeader(request, 'authorization') || '';
+    const token = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+    if (!token) {
+        response.status(401).json({ error: 'Sign in to use your inBestmen wallet.' });
+        return null;
+    }
+
+    try {
+        return await verifyFirebaseToken(token);
+    } catch (error) {
+        const statusCode = error.statusCode || 401;
+        response.status(statusCode).json({ error: error.message || 'Unable to validate the Firebase session.' });
+        return null;
+    }
+};
+
 export const requireAdmin = async (request, response) => {
     const authorization = getHeader(request, 'authorization') || '';
     const token = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';

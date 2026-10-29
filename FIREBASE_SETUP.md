@@ -57,7 +57,24 @@ Copy `js/admin-config.example.js` to `js/admin-config.js` and replace the exampl
 
 Keep ElevenLabs private keys and PayPal secrets in Vercel server-side environment variables. The browser should receive only short-lived signed URLs or server responses.
 
-## 5. Telegram project intake
+## 5. PayPal iB Coin wallet
+
+The user dashboard now uses the PayPal Orders v2 flow. The server creates the order, PayPal renders the approval button, the server captures the approved order and Firestore credits the same number of iB Coins as USD paid. The wallet balance is stored server-side in `users/{uid}.ibBalance`; each successful order is recorded once in `paypalTransactions/{orderId}` so a repeated approval cannot credit the wallet twice.
+
+In the PayPal Developer Dashboard, create an app under the merchant account and copy these values into Vercel Project Settings → Environment Variables for the appropriate deployment:
+
+```text
+PAYPAL_CLIENT_ID=your-paypal-app-client-id
+PAYPAL_CLIENT_SECRET=your-paypal-app-secret
+PAYPAL_ENVIRONMENT=sandbox
+PAYPAL_CURRENCY=USD
+```
+
+Use `sandbox` while testing with PayPal sandbox buyer accounts. Use `live` only after the merchant account and application are approved for real payments. Never put `PAYPAL_CLIENT_SECRET` in HTML, JavaScript or GitHub. The PayPal account used to create the app is the merchant account that receives the payment; a separate business email variable is not required by this checkout flow. Firebase server variables must also be configured: `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON` and a real Firebase Web App config in `js/firebase-config.js`.
+
+After adding the variables, redeploy Vercel and sign in with a real Firebase account. Open **inBest Money**, choose an amount and complete a sandbox checkout. The wallet should update only after the protected capture endpoint verifies the PayPal order, amount, currency and signed-in Firebase user. PayPal Orders API credentials and server-side order/capture handling are required; do not trust a client-side balance.
+
+## 6. Telegram project intake
 
 The public “Submit an idea” buttons now open the official Telegram project form at [t.me/inBestmenbot](https://t.me/inBestmenbot). Founders complete the structured intake directly with the ElevenLabs agent in Telegram; the website no longer requests a phone number or initiates AI phone calls.
 
@@ -67,13 +84,13 @@ The agent should collect the founder's name, email, Telegram username/chat ID, p
 
 The current site uses `ELEVENLABS_API_KEY` and `ELEVENLABS_AGENT_ID` for server-side ElevenLabs features. Telegram bot authentication is managed in the ElevenLabs integration and must not be placed in public website code.
 
-## 6. Web agent widget
+## 7. Web agent widget
 
 The public homepage includes the official ElevenLabs Conversational AI widget using the `inBestmen Project Intake Agent` ID. The widget is a secondary web conversation; the official project submission route remains Telegram.
 
 The widget supports private agents by requesting a short-lived signed URL from `/api/elevenlabs/signed-url`; the API key stays on Vercel. If you prefer to use the agent ID directly, ElevenLabs requires the widget agent to be public with authentication disabled. An allowlist can still restrict the public widget to `inbestmen.wstudio3d.com`. The widget follows ElevenLabs' official embed pattern and is loaded from the official embed package.
 
-## 7. Live admin connection
+## 8. Live admin connection
 
 The admin console now has live ElevenLabs panels for the configured agent, recent conversations, summaries and full conversation detail. The browser sends the current Firebase ID token, and the Vercel functions validate its signature before calling ElevenLabs.
 
@@ -89,7 +106,7 @@ INBESTMEN_ADMIN_EMAILS=approved-team@example.com
 
 An approved Firebase administrator can then open `/admin`, choose “ElevenLabs agents” and use Refresh. The admin email list is only one authorization option; `{ admin: true }` or `{ manager: true }` Firebase custom claims are also accepted. The same authorization must be enforced in Firebase and any future payment routes.
 
-## 8. Project JSON capture
+## 9. Project JSON capture
 
 ElevenLabs Data collection should be enabled in the agent's Analysis settings. Create fields with these identifiers so the platform can map the conversation into the inBestmen project brief:
 
@@ -117,7 +134,7 @@ The service account must have permission to write to the Firestore database. If 
 
 The optional `ELEVENLABS_PROJECT_DATA_COLLECTION_IDS` variable can contain the comma-separated Data collection IDs. When present, the admin conversation list requests those extracted values from ElevenLabs. The stored brief remains marked `pending_human_review` or `needs_more_information`; the AI never approves funding.
 
-## 9. OpenAI second-stage screening
+## 10. OpenAI second-stage screening
 
 The ElevenLabs post-call webhook now sends the normalized project brief through the OpenAI Responses API before saving it to Firestore. OpenAI returns Structured Outputs containing a review summary, quality score, strengths, missing information, follow-up questions, risk flags and the next stage. The next stage is restricted to `pending_human_review` or `needs_more_information`; it is never a funding approval.
 
@@ -132,7 +149,7 @@ The key must remain in Vercel and must not be placed in browser code. The manual
 
 If OpenAI is unavailable, the webhook returns an error instead of storing an unreviewed brief, allowing the provider to retry the delivery. The admin console then shows the saved OpenAI summary, score and status from Firestore.
 
-## 10. Recover completed ElevenLabs conversations
+## 11. Recover completed ElevenLabs conversations
 
 The admin console includes a protected **Sync calls** action under ElevenLabs agents. It retrieves up to ten recent conversations from the configured agent, fetches each full conversation, runs the same OpenAI screening used by the post-call webhook, and stores only conversations that are not already present in Firestore. This recovers calls that finished before the webhook was enabled or while a webhook delivery failed; it is limited to approved Firebase management sessions.
 
@@ -144,6 +161,6 @@ The board packet shown in the admin console includes the structured JSON, transc
 
 From **Project review**, **Open packet** displays the board summary, captured founder/project fields, ElevenLabs transcript and the complete source JSON. **Remove from list** deletes only the stored Firestore brief and records its conversation ID as ignored, so a later Sync calls action will not re-import it. The original ElevenLabs conversation is preserved in ElevenLabs for audit history.
 
-## 11. Local preview
+## 12. Local preview
 
 The committed placeholder config keeps the Dashboard in Preview mode. Replace its values to activate Firebase. Do not put PayPal or AI secrets in this browser configuration.

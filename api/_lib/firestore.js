@@ -62,6 +62,20 @@ const fromFirestoreValue = (value) => {
 const collectionUrl = (projectId, collection, documentId = '') => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/${collection}${documentId ? `/${encodeURIComponent(documentId)}` : ''}`;
 const documentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'elevenlabsProjectBriefs', documentId);
 const stateDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'inbestmenAdminState', documentId);
+const userDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'users', documentId);
+const paypalTransactionUrl = (projectId, documentId = '') => collectionUrl(projectId, 'paypalTransactions', documentId);
+const documentResourcePath = (projectId, collection, documentId) => `projects/${projectId}/databases/(default)/documents/${collection}/${documentId}`;
+const commitUrl = (projectId) => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents:commit`;
+
+const readFirestoreDocument = async (url, token) => {
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (response.status === 404) return null;
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Firestore could not read the document (${response.status}).`);
+    return data;
+};
+
+const fieldsToObject = (fields = {}) => Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, fromFirestoreValue(value)]));
 
 export const storeProjectBrief = async (brief) => {
     const { account, token } = await getAccessToken();
@@ -155,4 +169,55 @@ export const setProjectSyncBaseline = async (resetAt = new Date().toISOString())
     });
     if (!response.ok) throw new Error(`Firestore could not save the intake baseline (${response.status}).`);
     return resetAt;
+};
+
+export const getUserWallet = async (uid) => {
+    const safeUid = String(uid || '').trim();
+    if (!safeUid || safeUid.includes('/') || safeUid.length > 128) throw Object.assign(new Error('A valid Firebase user is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const document = await readFirestoreDocument(userDocumentUrl(account.projectId, safeUid), token);
+    const fields = fieldsToObject(document?.fields || {});
+    return { uid: safeUid, ibBalance: Number(fields.ibBalance || 0), totalPurchasedUsd: Number(fields.totalPurchasedUsd || 0), updatedAt: fields.updatedAt || null };
+};
+
+export const creditUserWallet = async ({ uid, orderId, captureId, amountUsd, currency, paypalStatus }) => {
+    const safeUid = String(uid || '').trim();
+    const safeOrderId = String(orderId || '').trim();
+    if (!safeUid || safeUid.includes('/') || safeUid.length > 128 || !safeOrderId || safeOrderId.includes('/') || safeOrderId.length > 150) throw Object.assign(new Error('A valid wallet and PayPal order are required.'), { statusCode: 400 });
+    const amount = Number(amountUsd);
+    if (!Number.isInteger(amount) || amount < 1 || amount > 100000) throw Object.assign(new Error('The PayPal amount is invalid.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const [walletDocument, existingTransaction] = await Promise.all([
+        readFirestoreDocument(userDocumentUrl(account.projectId, safeUid), token),
+        readFirestoreDocument(paypalTransactionUrl(account.projectId, safeOrderId), token)
+    ]);
+    const existingFields = fieldsToObject(existingTransaction?.fields || {});
+    const walletFields = fieldsToObject(walletDocument?.fields || {});
+    if (existingFields.status === 'COMPLETED') return { credited: false, duplicate: true, wallet: { uid: safeUid, ibBalance: Number(walletFields.ibBalance || 0), totalPurchasedUsd: Number(walletFields.totalPurchasedUsd || 0), updatedAt: walletFields.updatedAt || null } };
+
+    const now = new Date().toISOString();
+    const nextBalance = Number(walletFields.ibBalance || 0) + amount;
+    const nextPurchased = Number(walletFields.totalPurchasedUsd || 0) + amount;
+    const nextWalletFields = { ...walletFields, uid: safeUid, ibBalance: nextBalance, totalPurchasedUsd: nextPurchased, updatedAt: now };
+    const writes = [
+        {
+            update: { name: documentResourcePath(account.projectId, 'users', safeUid), fields: Object.fromEntries(Object.entries(nextWalletFields).map(([key, value]) => [key, toFirestoreValue(value)])) },
+            currentDocument: walletDocument?.updateTime ? { updateTime: walletDocument.updateTime } : { exists: false }
+        },
+        {
+            update: { name: documentResourcePath(account.projectId, 'paypalTransactions', safeOrderId), fields: { provider: toFirestoreValue('paypal'), orderId: toFirestoreValue(safeOrderId), captureId: toFirestoreValue(captureId || ''), uid: toFirestoreValue(safeUid), amountUsd: toFirestoreValue(amount), coins: toFirestoreValue(amount), currency: toFirestoreValue(currency || 'USD'), status: toFirestoreValue(paypalStatus || 'COMPLETED'), capturedAt: toFirestoreValue(now) } },
+            currentDocument: { exists: false }
+        }
+    ];
+    const commitResponse = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes }) });
+    if (!commitResponse.ok) {
+        const transactionAfterConflict = await readFirestoreDocument(paypalTransactionUrl(account.projectId, safeOrderId), token);
+        const transactionFields = fieldsToObject(transactionAfterConflict?.fields || {});
+        if (transactionFields.status === 'COMPLETED') {
+            const walletAfterConflict = await getUserWallet(safeUid);
+            return { credited: false, duplicate: true, wallet: walletAfterConflict };
+        }
+        throw new Error(`Firestore could not record the PayPal purchase (${commitResponse.status}).`);
+    }
+    return { credited: true, duplicate: false, wallet: { uid: safeUid, ibBalance: nextBalance, totalPurchasedUsd: nextPurchased, updatedAt: now } };
 };
