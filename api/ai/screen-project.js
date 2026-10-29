@@ -30,7 +30,7 @@ export default async function handler(request, response) {
         return response.status(400).json({ error: 'Please complete every project field.' });
     }
 
-    const prompt = `You are the first-stage project intake agent for inBestmen, a global social investment platform. Transform the founder's answers into a concise project brief for human reviewers. Do not promise funding, make a final investment decision, or infer sensitive personal data. Ask three practical follow-up questions that a voice agent should ask next.\n\nFounder answers:\nProject: ${input.projectName}\nFounder: ${input.founderName}\nLocation: ${input.projectLocation}\nCategory: ${input.projectCategory}\nIdea: ${input.projectIdea}`;
+    const prompt = `You are the first-stage project intake agent for inBestmen, a global social investment platform. Transform the founder's answers into a concise project brief for human reviewers. Do not promise funding, make a final investment decision, or infer sensitive personal data. Ask three practical follow-up questions that the Telegram intake agent should ask next.\n\nFounder answers:\nProject: ${input.projectName}\nFounder: ${input.founderName}\nLocation: ${input.projectLocation}\nCategory: ${input.projectCategory}\nIdea: ${input.projectIdea}`;
 
     try {
         const openAiResponse = await fetch('https://api.openai.com/v1/responses', {

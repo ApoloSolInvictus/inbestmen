@@ -57,23 +57,15 @@ Copy `js/admin-config.example.js` to `js/admin-config.js` and replace the exampl
 
 Keep ElevenLabs private keys and PayPal secrets in Vercel server-side environment variables. The browser should receive only short-lived signed URLs or server responses.
 
-## 5. ElevenLabs voice intake calls
+## 5. Telegram project intake
 
-The public “Submit an idea” form now collects the founder's email, E.164 phone number, preferred call language and explicit call consent. It posts to `/api/elevenlabs/outbound-call`; the server calls ElevenLabs and never exposes `ELEVENLABS_API_KEY` to the browser.
+The public “Submit an idea” buttons now open the official Telegram project form at [t.me/inBestmenbot](https://t.me/inBestmenbot). Founders complete the structured intake directly with the ElevenLabs agent in Telegram; the website no longer requests a phone number or initiates AI phone calls.
 
-Configure an ElevenLabs Conversational AI agent with a Twilio phone number imported and assigned to that agent. Add these Vercel environment variables:
+In ElevenLabs, connect the Telegram bot token from BotFather, enable the Telegram Message trigger and select the inBestmen Project Intake Agent. Telegram registers the webhook automatically. Keep this bot dedicated to inBestmen or disconnect the previous agent before connecting it here, because one bot should not be controlled by two webhook integrations at the same time.
 
-```text
-ELEVENLABS_API_KEY=
-ELEVENLABS_AGENT_ID=
-ELEVENLABS_AGENT_PHONE_NUMBER_ID=
-ELEVENLABS_ENVIRONMENT=production
-ELEVENLABS_CALL_RECORDING_ENABLED=false
-```
+The agent should collect the founder's name, email, Telegram username/chat ID, project name, location, category, idea, beneficiaries, solution, stage, team, budget, impact, timeline and risks. It must disclose that it is an AI assistant, ask for consent, speak in the selected language, prepare a structured project summary and mark it `pending_human_review`. It must never promise funding or make the final approval decision.
 
-The outbound request passes these dynamic variables to the agent: `project_name`, `founder_name`, `contact_email`, `contact_phone`, `project_location`, `project_category`, `project_idea`, `preferred_language` and `preferred_language_code`, and applies the selected base language to the conversation configuration. The agent voice and model must support the languages enabled in the form. Add instructions in the agent prompt to conduct the complete intake in `{{preferred_language}}`, ask the predetermined questions, never promise funding, and confirm that the founder is ready before ending the call.
-
-The endpoint uses ElevenLabs' native Twilio outbound-call API, which requires an agent ID, imported phone-number ID and destination number. See the [official outbound-call reference](https://elevenlabs.io/docs/api-reference/integrations/twilio/outbound-call). Add rate limiting, abuse protection and jurisdiction-specific consent review before opening outbound calling to unrestricted public traffic.
+The current site only needs `ELEVENLABS_API_KEY` and `ELEVENLABS_AGENT_ID` for server-side ElevenLabs features. Telegram bot authentication is managed in the ElevenLabs integration and must not be placed in public website code.
 
 ## 6. Local preview
 
