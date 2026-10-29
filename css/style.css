@@ -12,7 +12,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { max-width: 100%; overflow-x: hidden; scroll-behavior: smooth; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Manrope', sans-serif; font-size: 15px; line-height: 1.7; }
 a { color: inherit; text-decoration: none; }
 a:hover { color: inherit; }
@@ -99,6 +99,40 @@ h1, h2, h3, p { margin-top: 0; }
 
 @media (max-width: 991px) { .navbar-collapse { background: var(--white); border-top: 1px solid var(--line); margin-top: 12px; padding: 15px 0 8px; }.nav-actions { align-items: stretch !important; flex-wrap: wrap; margin-top: 10px; }.hero-section { padding: 84px 0 90px; }.hero-panel { max-width: 560px; }.process-grid { grid-template-columns: repeat(2, 1fr); }.about-panel, .submit-card { padding: 55px 35px; } }
 @media (max-width: 575px) { .announcement-bar { font-size: 9px; text-align: center; }.announcement-bar a { display: none; }.brand-logo-image { height: 34px; padding: 2px 5px; width: 148px; }.brand-name { font-size: 18px; }.hero-section { min-height: 0; padding: 70px 0 80px; }.hero-title { font-size: 3.4rem; }.hero-copy { font-size: 14px; }.hero-proof { margin-top: 38px; }.hero-panel { min-height: 425px; padding: 18px; }.planet-mark { height: 150px; margin: 56px auto 32px; width: 150px; }.planet-mark::before { height: 178px; width: 235px; }.section-pad { padding: 78px 0; }.section-heading { margin-bottom: 35px; }.section-heading h2, .about-panel h2, .submit-card h2 { font-size: 2.65rem; }.process-grid { grid-template-columns: 1fr; }.process-card { min-height: 265px; }.project-card-compact { display: block; }.project-card-compact .project-art { height: 170px; min-height: 170px; }.project-card-compact .art-symbol { right: 40px; top: 58px; }.project-card-compact .project-body { padding: 22px; }.about-panel, .submit-card { border-radius: 18px; padding: 40px 23px; }.brief-preview { margin-top: 15px; }.footer-bottom { align-items: flex-start; flex-direction: column; gap: 14px; line-height: 1.8; }.footer-bottom a, .translate-placeholder { margin-left: 0; margin-right: 15px; }.footer-bottom > span:last-child { display: flex; flex-wrap: wrap; gap: 8px; }.footer-bottom a, .translate-placeholder { margin-right: 0; } }
+
+/* Mobile containment: decorative rings and third-party widgets must never widen the viewport. */
+@media (max-width: 575px) {
+    .site-header,
+    main,
+    .site-footer,
+    .section-pad,
+    .signal-strip { max-width: 100%; overflow-x: hidden; }
+    .navbar > .container { flex-wrap: nowrap; min-width: 0; }
+    .navbar-brand { min-width: 0; max-width: calc(100% - 58px); }
+    .navbar-brand .brand-logo-image { max-width: 100%; }
+    .navbar-toggler { flex: 0 0 auto; }
+    .container { padding-left: 18px; padding-right: 18px; }
+    .row > * { min-width: 0; }
+    .hero-title,
+    .section-heading h2,
+    .about-panel h2,
+    .submit-card h2 { font-size: clamp(2.2rem, 11.5vw, 2.65rem); overflow-wrap: anywhere; }
+    .hero-copy,
+    .project-description,
+    .agent-widget-heading p,
+    .site-footer p { overflow-wrap: anywhere; }
+    .hero-actions .btn,
+    .submit-card .btn { max-width: 100%; }
+    .hero-proof,
+    .project-meta,
+    .progress-label { flex-wrap: wrap; min-width: 0; }
+    .project-meta { gap: 12px; }
+    .progress-label { gap: 8px 12px; }
+    .brief-preview { transform: none; }
+    .agent-widget-panel #inbestmenAgentWidget,
+    .agent-widget-panel elevenlabs-convai { max-width: 100%; }
+    .footer-bottom { max-width: 100%; }
+}
 
 /* Contrast overrides: Bootstrap's heading defaults must not overpower the dark surfaces. */
 .hero-section .hero-title,
