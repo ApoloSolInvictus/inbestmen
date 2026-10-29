@@ -129,6 +129,7 @@ h1, h2, h3, strong { font-family: 'Space Grotesk', sans-serif; }
 .live-agent-meta strong { font-size: 12px; margin-top: 7px; overflow-wrap: anywhere; }
 .live-agent-panel .admin-footnote { margin-bottom: 0; }
 .live-conversations-panel, .live-briefs-panel { overflow: hidden; }
+.live-brief-actions, .brief-document-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .live-data-state { background: var(--admin-paper); border-radius: 9px; color: var(--admin-muted); font-size: 10px; margin-bottom: 12px; padding: 12px; }
 .live-table { min-width: 650px; }
 .live-table td { font-size: 9px; }
@@ -142,7 +143,22 @@ h1, h2, h3, strong { font-family: 'Space Grotesk', sans-serif; }
 .live-brief-item small { color: var(--admin-muted); font-size: 9px; margin-top: 3px; }
 .live-brief-item span { color: #159c98; font-family: 'DM Mono', monospace; font-size: 8px; margin-top: 8px; text-transform: uppercase; }
 .live-brief-item em { color: var(--admin-muted); display: block; font-size: 10px; font-style: normal; line-height: 1.5; margin-top: 9px; }
+.live-brief-open { margin-top: 12px; }
+.live-brief-disclaimer { margin: 18px 0 0; }
 .conversation-detail { margin-top: 18px; }
 .conversation-detail pre { background: var(--admin-ink); border-radius: 10px; color: #dffefa; font-family: 'DM Mono', monospace; font-size: 10px; line-height: 1.6; margin: 0; max-height: 520px; overflow: auto; padding: 16px; white-space: pre-wrap; word-break: break-word; }
+.brief-document { margin-top: 18px; }
+.brief-document-meta { display: grid; gap: 10px; grid-template-columns: repeat(4, 1fr); margin-bottom: 18px; }
+.brief-document-meta span { background: var(--admin-paper); border-radius: 9px; color: var(--admin-muted); font-family: 'DM Mono', monospace; font-size: 9px; min-width: 0; overflow-wrap: anywhere; padding: 12px; text-transform: uppercase; }
+.brief-document-meta strong { color: var(--admin-ink); display: block; font-family: 'Manrope', sans-serif; font-size: 11px; margin-bottom: 5px; text-transform: none; }
+.brief-document-summary { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); margin-bottom: 18px; }
+.brief-document-summary > div { border: 1px solid var(--admin-line); border-radius: 10px; padding: 14px; }
+.brief-document-summary h4 { color: var(--admin-ink); font-size: 11px; margin: 0 0 8px; }
+.brief-document-summary p, .brief-document-summary li { color: var(--admin-muted); font-size: 10px; line-height: 1.6; margin: 0; }
+.brief-document-summary ul { margin: 0; padding-left: 17px; }
+.brief-document-content { background: var(--admin-ink); border-radius: 10px; color: #dffefa; font-family: 'DM Mono', monospace; font-size: 10px; line-height: 1.6; margin: 0; max-height: 650px; overflow: auto; padding: 16px; white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 1000px) { .admin-live-operations { grid-template-columns: 1fr; }.live-agent-panel { grid-column: auto; } }
-@media (max-width: 600px) { .live-agent-meta { grid-template-columns: 1fr; }.live-panel-actions { align-items: flex-end; flex-direction: column; gap: 8px; }.admin-live-operations .admin-panel { padding: 17px; } }
+@media (max-width: 700px) { .brief-document-meta, .brief-document-summary { grid-template-columns: 1fr 1fr; }.brief-document-actions { justify-content: flex-start; } }
+@media (max-width: 600px) { .live-agent-meta { grid-template-columns: 1fr; }.live-panel-actions { align-items: flex-end; flex-direction: column; gap: 8px; }.admin-live-operations .admin-panel { padding: 17px; }.live-brief-actions { align-items: flex-end; flex-direction: column; }.brief-document-meta, .brief-document-summary { grid-template-columns: 1fr; } }
+@media print { body { background: #fff; }.admin-sidebar, .admin-header, .admin-demo-banner, .brief-document-actions, .conversation-detail, .admin-footnote, .admin-toast { display: none !important; }.admin-shell, .admin-main, .admin-content, .brief-document { background: #fff; display: block; margin: 0; max-width: none; padding: 0; }.brief-document[hidden] { display: block !important; }.brief-document-summary > div, .brief-document-meta span { break-inside: avoid; }.brief-document-content { color: #111; max-height: none; overflow: visible; white-space: pre-wrap; }
+}

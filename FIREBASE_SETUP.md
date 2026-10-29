@@ -132,6 +132,14 @@ The key must remain in Vercel and must not be placed in browser code. The manual
 
 If OpenAI is unavailable, the webhook returns an error instead of storing an unreviewed brief, allowing the provider to retry the delivery. The admin console then shows the saved OpenAI summary, score and status from Firestore.
 
-## 10. Local preview
+## 10. Recover completed ElevenLabs conversations
+
+The admin console includes a protected **Sync calls** action under ElevenLabs agents. It retrieves up to ten recent conversations from the configured agent, fetches each full conversation, runs the same OpenAI screening used by the post-call webhook, and stores only conversations that are not already present in Firestore. This recovers calls that finished before the webhook was enabled or while a webhook delivery failed; it is limited to approved Firebase management sessions.
+
+For future conversations, keep the `post_call_transcription` webhook enabled with HMAC authentication and retries. ElevenLabs requires a successful 2xx response and may disable a webhook after repeated failures, so the sync action is a recovery path, not a replacement for the webhook.
+
+The board packet shown in the admin console includes the structured JSON, transcript metadata, AI review and screening status. It is an operational evidence document only. A licensed accountant and qualified legal counsel must validate tax, accounting, securities, privacy and regulatory conclusions before any investor presentation, fundraising or payout.
+
+## 11. Local preview
 
 The committed placeholder config keeps the Dashboard in Preview mode. Replace its values to activate Firebase. Do not put PayPal or AI secrets in this browser configuration.

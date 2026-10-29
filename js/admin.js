@@ -12,6 +12,9 @@ const demoBanner = document.getElementById('adminDemoBanner');
 let auth = null;
 let currentUser = null;
 let conversationCursor = null;
+let liveRefreshTimer = null;
+let briefRecords = new Map();
+let selectedBrief = null;
 
 if (configReady) auth = getAuth(initializeApp(config));
 
@@ -36,10 +39,10 @@ const setLiveMessage = (message, error = false) => {
     element.style.color = error ? '#a24e46' : '';
 };
 
-const apiFetch = async (path) => {
+const apiFetch = async (path, options = {}) => {
     if (!currentUser) throw new Error('An approved Firebase management session is required.');
     const token = await currentUser.getIdToken();
-    const response = await fetch(path, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+    const response = await fetch(path, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, Accept: 'application/json' } });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `Request failed (${response.status}).`);
     return body;
@@ -66,7 +69,7 @@ const renderConversations = (data, append = false) => {
     } else {
         document.getElementById('liveConversationState').textContent = `${conversations.length}${data.has_more ? '+' : ''} recent conversation${conversations.length === 1 ? '' : 's'} loaded from ElevenLabs.`;
         body.insertAdjacentHTML('beforeend', conversations.map((conversation) => {
-            const summary = conversation.transcript_summary || conversation.call_summary_title || 'Analysis is still processing.';
+            const summary = conversation.transcript_summary || conversation.analysis?.transcript_summary || conversation.call_summary_title || 'Analysis is still processing.';
             const statusClass = ['done', 'completed'].includes(conversation.status) ? 'ready' : conversation.status === 'failed' ? 'paused' : 'review';
             return `<tr><td><strong>${escapeHtml(conversation.conversation_id || '—')}</strong><small>${escapeHtml(formatDate(conversation.start_time_unix_secs))}</small></td><td><span class="status-pill ${statusClass}">${escapeHtml(conversation.status || 'unknown')}</span></td><td>${escapeHtml(conversation.conversation_initiation_source || '—')}</td><td class="summary-cell" title="${escapeHtml(summary)}">${escapeHtml(summary)}</td><td><button class="table-action approve" data-live-conversation="${escapeHtml(conversation.conversation_id || '')}" type="button">Open</button></td></tr>`;
         }).join(''));
@@ -78,7 +81,11 @@ const renderConversations = (data, append = false) => {
 
 const renderBriefs = (data) => {
     const briefs = data.briefs || [];
+    briefRecords = new Map(briefs.map((brief) => [String(brief.id || brief.conversationId || ''), brief]));
     document.getElementById('liveBriefCount').textContent = `${briefs.length} saved`;
+    const pendingCount = briefs.filter((brief) => ['pending_human_review', 'needs_more_information'].includes(brief.status)).length;
+    document.getElementById('pendingProjectsMetric').textContent = String(pendingCount);
+    document.getElementById('reviewNavCount').textContent = String(pendingCount);
     const state = document.getElementById('liveBriefState');
     const list = document.getElementById('liveBriefList');
     if (!briefs.length) {
@@ -86,8 +93,60 @@ const renderBriefs = (data) => {
         list.innerHTML = '';
         return;
     }
-    state.textContent = 'Structured briefs captured by the ElevenLabs webhook and stored in Firestore.';
-    list.innerHTML = briefs.map((brief) => `<div class="live-brief-item"><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong><small>${escapeHtml(brief.founder?.name || 'Founder not captured')} · ${escapeHtml(brief.project?.location || 'Location not captured')}</small><span>${escapeHtml(brief.status || 'pending_human_review')} · ${escapeHtml(formatDate(brief.capturedAt))}</span><em>${escapeHtml(brief.aiReview?.summary || 'OpenAI screening summary not available.')}</em></div>`).join('');
+    state.textContent = 'Structured briefs captured by ElevenLabs, screened by OpenAI and stored in Firestore.';
+    list.innerHTML = briefs.map((brief) => {
+        const briefId = String(brief.id || brief.conversationId || '');
+        return `<div class="live-brief-item"><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong><small>${escapeHtml(brief.founder?.name || 'Founder not captured')} · ${escapeHtml(brief.project?.location || 'Location not captured')}</small><span>${escapeHtml(brief.status || 'pending_human_review')} · ${escapeHtml(formatDate(brief.capturedAt))}</span><em>${escapeHtml(brief.aiReview?.summary || 'OpenAI screening summary not available.')}</em><button class="admin-secondary-button live-brief-open" data-brief-id="${escapeHtml(briefId)}" type="button"><i class="bi bi-file-earmark-text"></i> Open board packet</button></div>`;
+    }).join('');
+};
+
+const renderList = (items, emptyLabel = 'None recorded.') => {
+    const values = Array.isArray(items) ? items.filter(Boolean) : [];
+    return values.length ? `<ul>${values.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : `<p>${escapeHtml(emptyLabel)}</p>`;
+};
+
+const openBriefDocument = (briefId) => {
+    const brief = briefRecords.get(String(briefId));
+    if (!brief) return showToast('That project brief is no longer in the current list. Refresh the live data.');
+    selectedBrief = brief;
+    const project = brief.project || {};
+    const review = brief.aiReview || {};
+    document.getElementById('briefDocumentTitle').textContent = project.name || 'Project brief';
+    document.getElementById('briefDocumentMeta').innerHTML = `<span><strong>Status</strong>${escapeHtml(brief.status || '—')}</span><span><strong>Quality score</strong>${escapeHtml(review.qualityScore ?? '—')}/100</span><span><strong>Captured</strong>${escapeHtml(formatDate(brief.capturedAt))}</span><span><strong>Conversation</strong>${escapeHtml(brief.conversationId || '—')}</span>`;
+    document.getElementById('briefDocumentSummary').innerHTML = `<div><h4>Board summary</h4><p>${escapeHtml(review.summary || brief.review?.summary || 'No screening summary was returned.')}</p></div><div><h4>Strengths</h4>${renderList(review.strengths)}</div><div><h4>Information still needed</h4>${renderList(review.missingInformation)}</div><div><h4>Risk flags</h4>${renderList(review.riskFlags)}</div>`;
+    document.getElementById('briefDocumentContent').textContent = JSON.stringify(brief, null, 2);
+    const panel = document.getElementById('briefDocument');
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const syncRecentCalls = async () => {
+    const button = document.getElementById('syncRecentCalls');
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-arrow-repeat"></i> Syncing…';
+    try {
+        const data = await apiFetch('/api/projects/sync?limit=10', { method: 'POST' });
+        const synced = (data.results || []).filter((item) => !['already_stored', 'skipped'].includes(item.status)).length;
+        const failed = (data.results || []).filter((item) => item.status === 'failed').length;
+        showToast(`${synced} conversation${synced === 1 ? '' : 's'} synchronized${failed ? ` · ${failed} failed` : ''}.`);
+        await loadLiveOperations();
+    } catch (error) {
+        showToast(error.message || 'Recent calls could not be synchronized.');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="bi bi-cloud-arrow-down"></i> Sync calls';
+    }
+};
+
+const downloadBriefJson = () => {
+    if (!selectedBrief) return;
+    const filename = `${String(selectedBrief.project?.name || 'inbestmen-project-brief').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'inbestmen-project-brief'}.json`;
+    const blob = new Blob([JSON.stringify(selectedBrief, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
 };
 
 const loadConversations = async (append = false) => {
@@ -148,7 +207,11 @@ const openConsole = (user = null, preview = false) => {
     setAdminIdentity(user, preview);
     gate.hidden = true;
     app.hidden = false;
-    if (!preview) loadLiveOperations();
+    if (liveRefreshTimer) window.clearInterval(liveRefreshTimer);
+    if (!preview) {
+        loadLiveOperations();
+        liveRefreshTimer = window.setInterval(loadLiveOperations, 60000);
+    }
 };
 
 const isAllowedAdmin = async (user) => {
@@ -187,10 +250,14 @@ document.getElementById('adminEmailSignIn').addEventListener('submit', async (ev
 });
 
 previewButton.addEventListener('click', () => openConsole({ displayName: 'Management team', email: 'Preview mode' }, true));
-document.getElementById('adminSignOut').addEventListener('click', async () => { if (auth) await signOut(auth); currentUser = null; app.hidden = true; gate.hidden = false; showStatus('You have been signed out of the management console.'); });
+document.getElementById('adminSignOut').addEventListener('click', async () => { if (liveRefreshTimer) window.clearInterval(liveRefreshTimer); if (auth) await signOut(auth); currentUser = null; app.hidden = true; gate.hidden = false; showStatus('You have been signed out of the management console.'); });
 document.getElementById('refreshLiveData').addEventListener('click', loadLiveOperations);
+document.getElementById('syncRecentCalls').addEventListener('click', syncRecentCalls);
 document.getElementById('loadMoreConversations').addEventListener('click', () => loadConversations(true));
 document.getElementById('closeConversationDetail').addEventListener('click', () => { document.getElementById('conversationDetail').hidden = true; });
+document.getElementById('closeBriefDocument').addEventListener('click', () => { document.getElementById('briefDocument').hidden = true; });
+document.getElementById('downloadBriefJson').addEventListener('click', downloadBriefJson);
+document.getElementById('printBriefDocument').addEventListener('click', () => window.print());
 
 const setView = (view) => {
     document.querySelectorAll('[data-admin-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.adminPanel === view));
@@ -209,6 +276,9 @@ document.getElementById('adminSidebarClose').addEventListener('click', () => doc
 document.addEventListener('click', (event) => {
     const liveConversationButton = event.target.closest('[data-live-conversation]');
     if (liveConversationButton) openConversation(liveConversationButton.dataset.liveConversation);
+
+    const briefButton = event.target.closest('[data-brief-id]');
+    if (briefButton) openBriefDocument(briefButton.dataset.briefId);
 
     const reviewButton = event.target.closest('[data-review-action]');
     if (reviewButton) {
