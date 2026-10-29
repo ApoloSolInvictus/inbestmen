@@ -141,6 +141,7 @@ h1, h2, h3, strong { font-family: 'Space Grotesk', sans-serif; }
 .live-brief-item strong { font-size: 12px; }
 .live-brief-item small { color: var(--admin-muted); font-size: 9px; margin-top: 3px; }
 .live-brief-item span { color: #159c98; font-family: 'DM Mono', monospace; font-size: 8px; margin-top: 8px; text-transform: uppercase; }
+.live-brief-item em { color: var(--admin-muted); display: block; font-size: 10px; font-style: normal; line-height: 1.5; margin-top: 9px; }
 .conversation-detail { margin-top: 18px; }
 .conversation-detail pre { background: var(--admin-ink); border-radius: 10px; color: #dffefa; font-family: 'DM Mono', monospace; font-size: 10px; line-height: 1.6; margin: 0; max-height: 520px; overflow: auto; padding: 16px; white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 1000px) { .admin-live-operations { grid-template-columns: 1fr; }.live-agent-panel { grid-column: auto; } }

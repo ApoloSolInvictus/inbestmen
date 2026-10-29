@@ -87,7 +87,7 @@ const renderBriefs = (data) => {
         return;
     }
     state.textContent = 'Structured briefs captured by the ElevenLabs webhook and stored in Firestore.';
-    list.innerHTML = briefs.map((brief) => `<div class="live-brief-item"><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong><small>${escapeHtml(brief.founder?.name || 'Founder not captured')} · ${escapeHtml(brief.project?.location || 'Location not captured')}</small><span>${escapeHtml(brief.status || 'pending_human_review')} · ${escapeHtml(formatDate(brief.capturedAt))}</span></div>`).join('');
+    list.innerHTML = briefs.map((brief) => `<div class="live-brief-item"><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong><small>${escapeHtml(brief.founder?.name || 'Founder not captured')} · ${escapeHtml(brief.project?.location || 'Location not captured')}</small><span>${escapeHtml(brief.status || 'pending_human_review')} · ${escapeHtml(formatDate(brief.capturedAt))}</span><em>${escapeHtml(brief.aiReview?.summary || 'OpenAI screening summary not available.')}</em></div>`).join('');
 };
 
 const loadConversations = async (append = false) => {

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { getRequestBodyText } from '../_lib/auth.js';
 import { getElevenLabsAgentId } from '../_lib/elevenlabs.js';
 import { storeProjectBrief } from '../_lib/firestore.js';
+import { screenProjectBrief } from '../_lib/openai.js';
 import { buildProjectBrief } from '../_lib/project-brief.js';
 
 export const config = { api: { bodyParser: false } };
@@ -37,9 +38,10 @@ export default async function handler(request, response) {
     if (!brief.conversationId) return response.status(400).json({ error: 'The webhook does not include a conversation id.' });
 
     try {
-        const stored = await storeProjectBrief(brief);
-        response.status(200).json({ ok: true, eventType, conversationId: brief.conversationId, status: brief.status, stored });
+        const screenedBrief = await screenProjectBrief(brief);
+        const stored = await storeProjectBrief(screenedBrief);
+        response.status(200).json({ ok: true, eventType, conversationId: screenedBrief.conversationId, status: screenedBrief.status, stored });
     } catch (error) {
-        response.status(error.statusCode || 503).json({ error: error.message || 'The project brief could not be stored.' });
+        response.status(error.statusCode || 503).json({ error: error.message || 'The project brief could not be screened and stored.' });
     }
 }

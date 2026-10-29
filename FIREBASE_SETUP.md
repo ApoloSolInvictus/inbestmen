@@ -117,6 +117,21 @@ The service account must have permission to write to the Firestore database. If 
 
 The optional `ELEVENLABS_PROJECT_DATA_COLLECTION_IDS` variable can contain the comma-separated Data collection IDs. When present, the admin conversation list requests those extracted values from ElevenLabs. The stored brief remains marked `pending_human_review` or `needs_more_information`; the AI never approves funding.
 
-## 9. Local preview
+## 9. OpenAI second-stage screening
+
+The ElevenLabs post-call webhook now sends the normalized project brief through the OpenAI Responses API before saving it to Firestore. OpenAI returns Structured Outputs containing a review summary, quality score, strengths, missing information, follow-up questions, risk flags and the next stage. The next stage is restricted to `pending_human_review` or `needs_more_information`; it is never a funding approval.
+
+Add these Vercel variables:
+
+```text
+OPENAI_API_KEY=the-server-side-openai-key
+OPENAI_SCREENING_MODEL=gpt-5-mini
+```
+
+The key must remain in Vercel and must not be placed in browser code. The manual `/api/ai/screen-project` route now requires an approved Firebase admin session, so an anonymous visitor cannot spend OpenAI credits through that endpoint. The automated webhook uses the server-side key and does not require a browser session.
+
+If OpenAI is unavailable, the webhook returns an error instead of storing an unreviewed brief, allowing the provider to retry the delivery. The admin console then shows the saved OpenAI summary, score and status from Firestore.
+
+## 10. Local preview
 
 The committed placeholder config keeps the Dashboard in Preview mode. Replace its values to activate Firebase. Do not put PayPal or AI secrets in this browser configuration.

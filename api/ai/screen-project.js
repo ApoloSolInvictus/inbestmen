@@ -1,3 +1,5 @@
+import { requireAdmin } from '../_lib/auth.js';
+
 const projectSchema = {
     type: 'object',
     additionalProperties: false,
@@ -20,6 +22,8 @@ export default async function handler(request, response) {
         return response.status(405).json({ error: 'Method not allowed' });
     }
 
+    if (!await requireAdmin(request, response)) return;
+
     if (!process.env.OPENAI_API_KEY) {
         return response.status(503).json({ error: 'OpenAI is not configured. Add OPENAI_API_KEY in Vercel.' });
     }
@@ -41,6 +45,7 @@ export default async function handler(request, response) {
             },
             body: JSON.stringify({
                 model: process.env.OPENAI_SCREENING_MODEL || 'gpt-5-mini',
+                store: false,
                 input: prompt,
                 text: {
                     format: {
