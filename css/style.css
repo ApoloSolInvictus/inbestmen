@@ -109,3 +109,16 @@ h1, h2, h3, p { margin-top: 0; }
 .process-card:not(.featured) h3 { color: var(--ink); }
 .featured .process-icon { color: var(--cyan) !important; }
 .about-panel .eyebrow { color: var(--cyan) !important; }
+.agent-widget-panel { background: linear-gradient(135deg, rgba(5,20,49,.98), rgba(8,61,87,.95)); border: 1px solid rgba(46,216,208,.35); border-radius: 20px; color: #fff; margin-top: 30px; padding: clamp(22px, 4vw, 34px); position: relative; overflow: hidden; }
+.agent-widget-panel::after { border: 1px solid rgba(46,216,208,.22); border-radius: 50%; content: ''; height: 360px; position: absolute; right: -180px; top: -190px; width: 360px; }
+.agent-widget-heading { align-items: flex-start; display: flex; gap: 20px; justify-content: space-between; position: relative; z-index: 1; }
+.agent-widget-heading .eyebrow { color: #2ed8d0; margin-bottom: 5px; }
+.agent-widget-heading h3 { color: #fff; font-size: clamp(1.45rem, 3vw, 2.1rem); letter-spacing: -.06em; margin: 8px 0; }
+.agent-widget-heading p { color: rgba(255,255,255,.68); font-size: 12px; line-height: 1.7; margin: 0; max-width: 510px; }
+.agent-widget-status { color: #c9ed6a; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.agent-widget-status i { font-size: 7px; margin-right: 4px; }
+.agent-widget-panel elevenlabs-convai { display: block; margin: 22px auto 0; max-width: 560px; min-height: 150px; position: relative; z-index: 1; }
+.agent-widget-loading { align-items: center; border: 1px dashed rgba(46,216,208,.45); border-radius: 13px; color: rgba(255,255,255,.65); display: flex; font-family: 'DM Mono', monospace; font-size: 10px; justify-content: center; margin: 22px auto 0; max-width: 560px; min-height: 112px; padding: 18px; position: relative; text-align: center; z-index: 1; }
+.agent-widget-note { color: rgba(255,255,255,.48); font-family: 'DM Mono', monospace; font-size: 9px; margin: 16px 0 0; position: relative; text-align: center; z-index: 1; }
+.agent-widget-note i { color: #2ed8d0; margin-right: 4px; }
+@media (max-width: 575.98px) { .agent-widget-heading { display: block; }.agent-widget-status { display: inline-block; margin-top: 15px; }.agent-widget-panel elevenlabs-convai { min-height: 130px; } }

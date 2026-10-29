@@ -5,7 +5,9 @@ export default function handler(_request, response) {
         environment: process.env.VERCEL_ENV || 'local',
         integrations: {
             openai: Boolean(process.env.OPENAI_API_KEY),
-            elevenlabs: Boolean(process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_AGENT_ID)
+            elevenlabs: Boolean(process.env.ELEVENLABS_API_KEY && (process.env.ELEVENLABS_AGENT_ID || 'agent_1801m62c1ranf3y9g9p4v2hd7g1v')),
+            elevenlabsWebhook: Boolean(process.env.ELEVENLABS_WEBHOOK_SECRET || process.env.ELEVENLABS_POST_CALL_WEBHOOK_SECRET),
+            firestore: Boolean(process.env.FIREBASE_PROJECT_ID && (process.env.FIREBASE_SERVICE_ACCOUNT_JSON || (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY)))
         }
     });
 }

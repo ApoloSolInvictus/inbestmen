@@ -116,3 +116,32 @@ h1, h2, h3, strong { font-family: 'Space Grotesk', sans-serif; }
 @media (max-width: 1100px) { .agent-grid { grid-template-columns: repeat(2, 1fr); }.admin-metric-grid, .ledger-summary { grid-template-columns: repeat(2, 1fr); }.health-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 800px) { .admin-sidebar { box-shadow: 14px 0 35px rgba(0,0,0,.25); left: -285px; position: fixed; top: 0; transition: left .25s ease; width: 270px; z-index: 20; }.admin-sidebar.open { left: 0; }.admin-sidebar-close, .admin-mobile-menu { display: block; }.admin-header { justify-content: flex-start; padding: 0 20px; }.admin-mobile-menu { margin-right: 13px; }.admin-header-actions { margin-left: auto; }.admin-environment { display: none; }.admin-content { padding: 25px 20px 65px; }.admin-view-heading { align-items: flex-start; flex-direction: column; gap: 18px; }.admin-view-heading h2 { font-size: 2.45rem; }.admin-overview-grid { grid-template-columns: 1fr; }.agent-summary-row { grid-template-columns: repeat(2, 1fr); }.completed-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .admin-login-card { border-radius: 18px; padding: 30px 22px; }.admin-brand img { height: 34px; width: 148px; }.admin-metric-grid, .health-grid, .agent-grid, .completed-grid { grid-template-columns: 1fr; }.admin-metric-card { min-height: 125px; }.admin-metric-card strong { margin-top: 19px; }.admin-panel { padding: 18px; }.admin-panel-heading h3 { font-size: 20px; }.agent-summary-row { grid-template-columns: 1fr 1fr; }.agent-summary-row > div { padding: 16px; }.admin-user-chip > span:last-child { display: none; }.admin-content { padding-left: 14px; padding-right: 14px; }.admin-demo-banner { align-items: flex-start; }.admin-view-heading h2 { font-size: 2.15rem; }.ledger-summary { grid-template-columns: 1fr 1fr; }.ledger-summary > div { padding: 14px; }.ledger-summary strong { font-size: 19px; }.admin-toast { bottom: 16px; left: 14px; right: 14px; } }
+.admin-live-operations { display: grid; gap: 18px; grid-template-columns: 1fr 1fr; margin-top: 18px; }
+.admin-live-operations > article { min-width: 0; }
+.live-agent-panel { grid-column: 1 / -1; }
+.live-panel-actions { align-items: center; display: flex; gap: 15px; }
+.live-panel-actions .admin-text-button { white-space: nowrap; }
+.live-panel-actions .admin-text-button i { margin-right: 4px; }
+.live-agent-meta { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
+.live-agent-meta > div { background: var(--admin-paper); border-radius: 10px; padding: 13px; }
+.live-agent-meta span, .live-agent-meta strong { display: block; }
+.live-agent-meta span { color: var(--admin-muted); font-family: 'DM Mono', monospace; font-size: 8px; text-transform: uppercase; }
+.live-agent-meta strong { font-size: 12px; margin-top: 7px; overflow-wrap: anywhere; }
+.live-agent-panel .admin-footnote { margin-bottom: 0; }
+.live-conversations-panel, .live-briefs-panel { overflow: hidden; }
+.live-data-state { background: var(--admin-paper); border-radius: 9px; color: var(--admin-muted); font-size: 10px; margin-bottom: 12px; padding: 12px; }
+.live-table { min-width: 650px; }
+.live-table td { font-size: 9px; }
+.live-table td:first-child strong { font-family: 'DM Mono', monospace; font-size: 9px; }
+.live-table .summary-cell { max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-more-button { margin-top: 16px; }
+.live-brief-list { display: grid; gap: 9px; }
+.live-brief-item { border: 1px solid var(--admin-line); border-radius: 10px; padding: 12px; }
+.live-brief-item strong, .live-brief-item small, .live-brief-item span { display: block; }
+.live-brief-item strong { font-size: 12px; }
+.live-brief-item small { color: var(--admin-muted); font-size: 9px; margin-top: 3px; }
+.live-brief-item span { color: #159c98; font-family: 'DM Mono', monospace; font-size: 8px; margin-top: 8px; text-transform: uppercase; }
+.conversation-detail { margin-top: 18px; }
+.conversation-detail pre { background: var(--admin-ink); border-radius: 10px; color: #dffefa; font-family: 'DM Mono', monospace; font-size: 10px; line-height: 1.6; margin: 0; max-height: 520px; overflow: auto; padding: 16px; white-space: pre-wrap; word-break: break-word; }
+@media (max-width: 1000px) { .admin-live-operations { grid-template-columns: 1fr; }.live-agent-panel { grid-column: auto; } }
+@media (max-width: 600px) { .live-agent-meta { grid-template-columns: 1fr; }.live-panel-actions { align-items: flex-end; flex-direction: column; gap: 8px; }.admin-live-operations .admin-panel { padding: 17px; } }
