@@ -17,15 +17,9 @@ document.getElementById('googleSignIn').addEventListener('click', async () => {
     if (!auth) return showStatus('Firebase is not connected yet. Add your Web App configuration first.');
     try { const result = await signInWithPopup(auth, provider); goToDashboard(result.user); } catch (error) { showStatus(error.message || 'Google sign-in could not be completed.', true); }
 });
-
 document.getElementById('emailSignIn').addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!auth) return showStatus('Firebase is not connected yet. Add your Web App configuration first.');
     const email = document.getElementById('email').value.trim(); const password = document.getElementById('password').value;
     try { const result = await signInWithEmailAndPassword(auth, email, password); goToDashboard(result.user); } catch (error) { showStatus(error.message || 'Email sign-in could not be completed.', true); }
-});
-
-document.getElementById('guestSignIn').addEventListener('click', () => {
-    localStorage.setItem('inbestmen_user', JSON.stringify({ name: 'Guest Member', email: 'Preview mode' }));
-    window.location.href = 'dashboard.html';
 });
