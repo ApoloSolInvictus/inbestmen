@@ -77,3 +77,22 @@ export const listProjectBriefs = async (limit = 50) => {
     if (!response.ok) throw new Error(`Firestore could not list project briefs (${response.status}).`);
     return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...Object.fromEntries(Object.entries(document.fields || {}).map(([key, value]) => [key, fromFirestoreValue(value)])) }));
 };
+
+export const deleteAllProjectBriefs = async () => {
+    const { account, token } = await getAccessToken();
+    let deleted = 0;
+    while (true) {
+        const response = await fetch(`${documentUrl(account.projectId)}?pageSize=100`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await response.json();
+        if (!response.ok) throw new Error(`Firestore could not list project briefs for deletion (${response.status}).`);
+        const documents = data.documents || [];
+        if (!documents.length) break;
+        for (const document of documents) {
+            const documentId = document.name.split('/').pop();
+            const deleteResponse = await fetch(documentUrl(account.projectId, documentId), { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+            if (!deleteResponse.ok && deleteResponse.status !== 404) throw new Error(`Firestore could not delete project brief (${deleteResponse.status}).`);
+            if (deleteResponse.ok || deleteResponse.status === 404) deleted += 1;
+        }
+    }
+    return { deleted };
+};

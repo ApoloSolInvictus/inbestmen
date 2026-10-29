@@ -58,6 +58,7 @@ const renderAgentStatus = (data) => {
     pill.innerHTML = `<i class="bi bi-circle-fill"></i> ${data.ok ? 'Operational' : 'Unavailable'}`;
     setLiveMessage('The live agent identity and API connection are verified for this admin session.');
     document.getElementById('agentNavCount').textContent = 'LIVE';
+    document.getElementById('activeAgentsMetric').textContent = data.ok ? '1' : '0';
 };
 
 const renderConversations = (data, append = false) => {
@@ -76,7 +77,32 @@ const renderConversations = (data, append = false) => {
     }
     conversationCursor = data.next_cursor || null;
     document.getElementById('liveConversationCount').textContent = `${conversations.length}${data.has_more ? '+' : ''} loaded`;
+    document.getElementById('sessionsTodayMetric').textContent = String(conversations.length);
     document.getElementById('loadMoreConversations').hidden = !data.has_more;
+};
+
+const renderReviewQueue = (briefs) => {
+    const reviewState = document.getElementById('liveReviewState');
+    const reviewBody = document.getElementById('liveReviewBody');
+    const activeBriefs = briefs.filter((brief) => ['pending_human_review', 'needs_more_information'].includes(brief.status));
+    reviewState.textContent = activeBriefs.length ? `${activeBriefs.length} live project brief${activeBriefs.length === 1 ? '' : 's'} awaiting human review.` : 'No project briefs are ready for review.';
+    reviewBody.innerHTML = activeBriefs.map((brief) => {
+        const project = brief.project || {};
+        const founder = brief.founder || {};
+        const review = brief.aiReview || {};
+        const id = String(brief.id || brief.conversationId || '');
+        const goal = typeof project.budgetUsd === 'number' && project.budgetUsd > 0 ? `$${project.budgetUsd.toLocaleString()}` : 'Not captured';
+        const statusClass = brief.status === 'pending_human_review' ? 'review' : 'priority';
+        return `<tr><td><div class="table-project"><span class="table-project-mark cyan"><i class="bi bi-file-earmark-text"></i></span><div><strong>${escapeHtml(project.name || 'Unnamed project')}</strong><small>${escapeHtml(project.category || 'Category not captured')}</small></div></div></td><td>${escapeHtml(founder.name || 'Founder not captured')}<br><small>${escapeHtml(project.location || 'Location not captured')}</small></td><td><span class="status-pill ${statusClass}">${escapeHtml(brief.status || 'needs_more_information')}</span><small>${escapeHtml(review.qualityScore ?? '—')}/100 score</small></td><td><strong>${escapeHtml(goal)}</strong></td><td><button class="table-link" data-brief-id="${escapeHtml(id)}" type="button">Open packet</button></td></tr>`;
+    }).join('');
+};
+
+const renderOverview = (briefs) => {
+    const queue = document.getElementById('liveOverviewQueue');
+    const activity = document.getElementById('liveOverviewActivity');
+    const reviewBriefs = briefs.filter((brief) => ['pending_human_review', 'needs_more_information'].includes(brief.status));
+    queue.innerHTML = reviewBriefs.length ? reviewBriefs.slice(0, 4).map((brief, index) => `<div class="priority-item"><span class="priority-number">${String(index + 1).padStart(2, '0')}</span><div><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong><small>${escapeHtml(brief.project?.category || 'Category not captured')} · ${escapeHtml(brief.project?.location || 'Location not captured')}</small></div><span class="status-pill ${brief.status === 'pending_human_review' ? 'review' : 'priority'}">${escapeHtml(brief.status || 'Review')}</span></div>`).join('') : '<div class="live-empty-state">No real projects have been received yet.</div>';
+    activity.innerHTML = briefs.length ? briefs.slice(0, 4).map((brief) => `<div><span class="activity-icon cyan"><i class="bi bi-mic"></i></span><p><strong>${escapeHtml(brief.project?.name || 'Unnamed project')}</strong> intake captured<small>${escapeHtml(brief.status || 'Review pending')} · ${escapeHtml(formatDate(brief.capturedAt))}</small></p></div>`).join('') : '<div class="live-empty-state">No conversations have been synchronized yet.</div>';
 };
 
 const renderBriefs = (data) => {
@@ -86,6 +112,10 @@ const renderBriefs = (data) => {
     const pendingCount = briefs.filter((brief) => ['pending_human_review', 'needs_more_information'].includes(brief.status)).length;
     document.getElementById('pendingProjectsMetric').textContent = String(pendingCount);
     document.getElementById('reviewNavCount').textContent = String(pendingCount);
+    document.getElementById('briefsReadyMetric').textContent = String(briefs.length);
+    document.getElementById('humanHandoffsMetric').textContent = String(briefs.filter((brief) => brief.status === 'pending_human_review').length);
+    renderReviewQueue(briefs);
+    renderOverview(briefs);
     const state = document.getElementById('liveBriefState');
     const list = document.getElementById('liveBriefList');
     if (!briefs.length) {
@@ -135,6 +165,26 @@ const syncRecentCalls = async () => {
     } finally {
         button.disabled = false;
         button.innerHTML = '<i class="bi bi-cloud-arrow-down"></i> Sync calls';
+    }
+};
+
+const clearStoredBriefs = async () => {
+    const confirmation = window.prompt('This permanently deletes all stored project briefs from Firestore. Type RESET to continue.');
+    if (confirmation !== 'RESET') return;
+    const button = document.getElementById('clearStoredBriefs');
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-arrow-repeat"></i> Clearing…';
+    try {
+        const data = await apiFetch('/api/projects/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation }) });
+        selectedBrief = null;
+        document.getElementById('briefDocument').hidden = true;
+        showToast(`${data.deleted || 0} stored project brief${data.deleted === 1 ? '' : 's'} deleted.`);
+        await loadLiveOperations();
+    } catch (error) {
+        showToast(error.message || 'Stored project briefs could not be deleted.');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="bi bi-trash3"></i> Clear data';
     }
 };
 
@@ -253,6 +303,7 @@ previewButton.addEventListener('click', () => openConsole({ displayName: 'Manage
 document.getElementById('adminSignOut').addEventListener('click', async () => { if (liveRefreshTimer) window.clearInterval(liveRefreshTimer); if (auth) await signOut(auth); currentUser = null; app.hidden = true; gate.hidden = false; showStatus('You have been signed out of the management console.'); });
 document.getElementById('refreshLiveData').addEventListener('click', loadLiveOperations);
 document.getElementById('syncRecentCalls').addEventListener('click', syncRecentCalls);
+document.getElementById('clearStoredBriefs').addEventListener('click', clearStoredBriefs);
 document.getElementById('loadMoreConversations').addEventListener('click', () => loadConversations(true));
 document.getElementById('closeConversationDetail').addEventListener('click', () => { document.getElementById('conversationDetail').hidden = true; });
 document.getElementById('closeBriefDocument').addEventListener('click', () => { document.getElementById('briefDocument').hidden = true; });
