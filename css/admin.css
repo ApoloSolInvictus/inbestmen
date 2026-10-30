@@ -181,3 +181,6 @@ h1, h2, h3, strong { font-family: 'Space Grotesk', sans-serif; }
 @media (max-width: 600px) { .live-agent-meta { grid-template-columns: 1fr; }.live-panel-actions { align-items: flex-end; flex-direction: column; gap: 8px; }.admin-live-operations .admin-panel { padding: 17px; }.live-brief-actions { align-items: flex-end; flex-direction: column; }.brief-document-meta, .brief-document-summary, .brief-document-facts { grid-template-columns: 1fr; }.brief-document-actions { align-items: flex-start; flex-direction: column; } }
 @media print { body { background: #fff; }.admin-sidebar, .admin-header, .admin-demo-banner, .brief-document-actions, .conversation-detail, .admin-footnote, .admin-toast { display: none !important; }.admin-shell, .admin-main, .admin-content, .brief-document { background: #fff; display: block; margin: 0; max-width: none; padding: 0; }.brief-document[hidden] { display: block !important; }.brief-document-summary > div, .brief-document-meta span { break-inside: avoid; }.brief-document-content { color: #111; max-height: none; overflow: visible; white-space: pre-wrap; }
 }
+/* Publish a reviewed packet into the public project catalog. */
+.admin-approve-button { background: #e7f6eb; border-radius: 7px; color: #347349; padding: 7px 9px; }
+.admin-approve-button:hover { background: #d2efd9; color: #245d38; }

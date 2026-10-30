@@ -106,6 +106,98 @@ export const listProjectDocuments = async (limit = 100) => {
     return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...fieldsToObject(document.fields || {}) }));
 };
 
+const makePublishedProjectId = (brief) => {
+    const source = String(brief.publishedProjectId || brief.project?.name || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 55) || 'project';
+    const suffix = String(brief.id || brief.conversationId || crypto.randomUUID()).replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 32);
+    return `${source}-${suffix}`.slice(0, 100);
+};
+
+const makePublicBrief = (brief) => {
+    const project = brief.project || {};
+    const review = brief.aiReview || {};
+    return {
+        founderName: brief.founder?.name || '',
+        summary: review.summary || brief.review?.summary || project.proposedSolution || '',
+        problem: project.problem || '',
+        beneficiaries: project.beneficiaries || '',
+        proposedSolution: project.proposedSolution || '',
+        stage: project.stage || '',
+        team: project.team || '',
+        budgetUsd: Number(project.budgetUsd || 0),
+        impact: project.impact || '',
+        timeline: project.timeline || '',
+        risks: project.risks || '',
+        strengths: Array.isArray(review.strengths) ? review.strengths : [],
+        qualityScore: Number.isFinite(Number(review.qualityScore)) ? Number(review.qualityScore) : null,
+        approvedStatus: 'approved_for_community_support'
+    };
+};
+
+const projectVisuals = (category = '') => {
+    const value = String(category).toLowerCase();
+    if (value.includes('water') || value.includes('climate') || value.includes('energy')) return { visual: 'visual-water', icon: 'bi-droplet-half' };
+    if (value.includes('food') || value.includes('regeneration')) return { visual: 'visual-food', icon: 'bi-flower1' };
+    if (value.includes('health') || value.includes('wellbeing')) return { visual: 'visual-health', icon: 'bi-heart-pulse' };
+    return { visual: 'visual-education', icon: 'bi-stars' };
+};
+
+export const publishProjectBrief = async ({ briefId, approvedBy = '' }) => {
+    const safeBriefId = String(briefId || '').trim();
+    if (!safeBriefId || safeBriefId.includes('/') || safeBriefId.length > 150) throw Object.assign(new Error('A valid project brief id is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const briefDocument = await readFirestoreDocument(documentUrl(account.projectId, safeBriefId), token);
+    if (!briefDocument) throw Object.assign(new Error('That project brief could not be found.'), { statusCode: 404 });
+
+    const storedBrief = { id: safeBriefId, ...fieldsToObject(briefDocument.fields || {}) };
+    if (!['pending_human_review', 'approved'].includes(String(storedBrief.status || ''))) throw Object.assign(new Error('This project needs more information before it can be published.'), { statusCode: 409 });
+    const project = storedBrief.project || {};
+    const publicBrief = makePublicBrief(storedBrief);
+    const projectId = storedBrief.publishedProjectId || makePublishedProjectId(storedBrief);
+    const existingProjectDocument = await readFirestoreDocument(projectDocumentUrl(account.projectId, projectId), token);
+    const existingProject = fieldsToObject(existingProjectDocument?.fields || {});
+    const visuals = projectVisuals(project.category);
+    const now = new Date().toISOString();
+    const ibGoal = Math.max(0, Math.round(Number(existingProject.ibGoal || project.budgetUsd || 0)));
+    const nextProject = {
+        ...existingProject,
+        id: projectId,
+        name: project.name || 'Unnamed project',
+        category: project.category || 'Community project',
+        location: project.location || 'Location not captured',
+        summary: publicBrief.summary || project.proposedSolution || 'Approved project proposal.',
+        ibRaised: Math.max(0, Number(existingProject.ibRaised || 0)),
+        ibGoal,
+        status: 'Approved for community support',
+        approved: true,
+        approvedBriefId: safeBriefId,
+        approvedAt: existingProject.approvedAt || now,
+        proposalUrl: existingProject.proposalUrl || '',
+        publicBrief,
+        ...visuals,
+        updatedAt: now
+    };
+    const nextBrief = {
+        ...storedBrief,
+        status: 'approved',
+        publishedProjectId: projectId,
+        approvedAt: existingProject.approvedAt || now,
+        approvedBy: approvedBy || storedBrief.approvedBy || ''
+    };
+    const writes = [
+        {
+            update: { name: documentResourcePath(account.projectId, 'elevenlabsProjectBriefs', safeBriefId), fields: Object.fromEntries(Object.entries(nextBrief).map(([key, value]) => [key, toFirestoreValue(value)])) },
+            currentDocument: briefDocument.updateTime ? { updateTime: briefDocument.updateTime } : { exists: false }
+        },
+        {
+            update: { name: documentResourcePath(account.projectId, 'projects', projectId), fields: Object.fromEntries(Object.entries(nextProject).map(([key, value]) => [key, toFirestoreValue(value)])) },
+            currentDocument: existingProjectDocument?.updateTime ? { updateTime: existingProjectDocument.updateTime } : { exists: false }
+        }
+    ];
+    const commitResponse = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes }) });
+    if (!commitResponse.ok) throw Object.assign(new Error('The project could not be published safely. Please refresh and try again.'), { statusCode: 409 });
+    return { brief: nextBrief, project: nextProject };
+};
+
 export const deleteProjectBrief = async (documentId) => {
     const safeId = String(documentId || '').trim();
     if (!safeId || safeId.includes('/') || safeId.length > 150) throw Object.assign(new Error('A valid project brief id is required.'), { statusCode: 400 });

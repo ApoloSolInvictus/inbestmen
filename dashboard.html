@@ -50,6 +50,20 @@
             </main>
         </div>
     </div>
+    <div id="projectModal" class="project-modal" hidden aria-hidden="true">
+        <div class="project-modal-backdrop" data-close-project></div>
+        <article class="project-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="projectModalName">
+            <header class="project-modal-header"><div><span id="projectModalCategory" class="eyebrow"></span><h2 id="projectModalName">Project packet</h2><p id="projectModalLocation" class="project-modal-location"></p></div><button id="closeProjectModal" class="project-modal-close" type="button" aria-label="Close project packet">×</button></header>
+            <div class="project-modal-content">
+                <div class="project-modal-signal"><div><span id="projectModalStatus" class="project-status"></span><p id="projectModalSummary" class="project-modal-summary"></p></div><div class="project-modal-progress"><strong id="projectModalProgress">0%</strong><span>of goal</span><div class="project-progress"><span id="projectModalBar" style="width:0%"></span></div><div><span id="projectModalRaised">0 iB Coins</span><span id="projectModalGoal">Goal 0 iB</span></div></div></div>
+                <section class="project-modal-section"><span class="eyebrow">Project information</span><h3>What the ElevenLabs intake captured.</h3><div id="projectModalDetails" class="project-modal-details"></div></section>
+                <section class="project-modal-section project-modal-ai"><span class="eyebrow">AI screening summary</span><p id="projectModalAiSummary">No screening summary has been published yet.</p><div id="projectModalStrengths" class="project-modal-strengths"></div></section>
+                <details class="project-modal-json"><summary>View public project JSON</summary><pre id="projectModalJson"></pre></details>
+                <div class="project-modal-footer"><a id="projectModalProposal" class="btn btn-outline-dark" href="#" target="_blank" rel="noopener" hidden>Open original proposal <i class="bi bi-arrow-up-right"></i></a><div id="projectModalDonateArea" class="project-modal-donate"><span>Your Wallet: <strong><span class="coin-token" role="img" aria-label="iB Coin"><img src="images/inbestmen-favicon.png" alt=""></span> <span id="projectModalWallet">0</span></strong></span><label class="visually-hidden" for="modalDonationAmount">iB Coins to donate</label><select id="modalDonationAmount" class="donation-amount" aria-label="iB Coins to donate"><option value="1">1 iB</option><option value="2">2 iB</option><option value="5">5 iB</option><option value="10">10 iB</option><option value="21">21 iB</option></select><button id="modalDonateButton" class="btn btn-primary" type="button">Donate iB Coins <i class="bi bi-arrow-right"></i></button></div></div>
+                <p id="projectModalPrivacy" class="project-modal-privacy"><i class="bi bi-shield-check"></i> Public packets show project information only. Private contact data and the full conversation remain in the Admin console.</p>
+            </div>
+        </article>
+    </div>
     <div id="toast" class="dashboard-toast" role="status"></div>
     <script src="js/firebase-config.js"></script>
     <script src="js/coin-mark.js"></script>

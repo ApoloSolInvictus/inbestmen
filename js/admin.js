@@ -93,7 +93,8 @@ const renderReviewQueue = (briefs) => {
         const id = String(brief.id || brief.conversationId || '');
         const goal = typeof project.budgetUsd === 'number' && project.budgetUsd > 0 ? `$${project.budgetUsd.toLocaleString()}` : 'Not captured';
         const statusClass = brief.status === 'pending_human_review' ? 'review' : 'priority';
-        return `<tr><td><div class="table-project"><span class="table-project-mark cyan"><i class="bi bi-file-earmark-text"></i></span><div><strong>${escapeHtml(project.name || 'Unnamed project')}</strong><small>${escapeHtml(project.category || 'Category not captured')}</small></div></div></td><td>${escapeHtml(founder.name || 'Founder not captured')}<br><small>${escapeHtml(project.location || 'Location not captured')}</small></td><td><span class="status-pill ${statusClass}">${escapeHtml(brief.status || 'needs_more_information')}</span><small>${escapeHtml(review.qualityScore ?? '—')}/100 score</small></td><td><strong>${escapeHtml(goal)}</strong></td><td><div class="table-actions"><button class="table-link" data-open-brief-id="${escapeHtml(id)}" type="button">Open packet</button><button class="table-action remove" data-delete-brief-id="${escapeHtml(id)}" type="button" aria-label="Remove ${escapeHtml(project.name || 'project')} from the dashboard">Remove</button></div></td></tr>`;
+        const publishAction = brief.status === 'pending_human_review' ? `<button class="table-action approve" data-approve-brief-id="${escapeHtml(id)}" type="button">Approve to projects</button>` : '<span class="table-muted">Needs more information</span>';
+        return `<tr><td><div class="table-project"><span class="table-project-mark cyan"><i class="bi bi-file-earmark-text"></i></span><div><strong>${escapeHtml(project.name || 'Unnamed project')}</strong><small>${escapeHtml(project.category || 'Category not captured')}</small></div></div></td><td>${escapeHtml(founder.name || 'Founder not captured')}<br><small>${escapeHtml(project.location || 'Location not captured')}</small></td><td><span class="status-pill ${statusClass}">${escapeHtml(brief.status || 'needs_more_information')}</span><small>${escapeHtml(review.qualityScore ?? '—')}/100 score</small></td><td><strong>${escapeHtml(goal)}</strong></td><td><div class="table-actions"><button class="table-link" data-open-brief-id="${escapeHtml(id)}" type="button">Open packet</button>${publishAction}<button class="table-action remove" data-delete-brief-id="${escapeHtml(id)}" type="button" aria-label="Remove ${escapeHtml(project.name || 'project')} from the dashboard">Remove</button></div></td></tr>`;
     }).join('');
 };
 
@@ -181,10 +182,34 @@ const openBriefDocument = (briefId) => {
     document.getElementById('briefDocumentFacts').innerHTML = renderFacts(brief);
     document.getElementById('briefDocumentTranscript').innerHTML = renderTranscript(brief.transcript);
     document.getElementById('briefDocumentContent').textContent = JSON.stringify(brief, null, 2);
+    const approveButton = document.getElementById('approveBriefDocument');
+    approveButton.hidden = brief.status !== 'pending_human_review';
+    approveButton.disabled = false;
     const panel = document.getElementById('briefDocument');
     setView('reviews');
     panel.hidden = false;
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const approveStoredBrief = async (briefId, trigger = null) => {
+    const brief = briefRecords.get(String(briefId));
+    if (!brief) return showToast('That project brief is no longer in the current list. Refresh the live data.');
+    if (brief.status !== 'pending_human_review') return showToast('This project needs more information before it can be published.');
+    const projectName = brief.project?.name || 'this project';
+    if (!window.confirm(`Approve “${projectName}” for the public inBest Projects list?`)) return;
+    if (trigger) { trigger.disabled = true; trigger.textContent = 'Publishing…'; }
+    try {
+        const data = await apiFetch('/api/projects/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: brief.id || brief.conversationId }) });
+        if (selectedBrief && String(selectedBrief.id || selectedBrief.conversationId) === String(briefId)) {
+            selectedBrief = data.brief || selectedBrief;
+            document.getElementById('briefDocument').hidden = true;
+        }
+        showToast(`${projectName} was approved and published to inBest Projects.`);
+        await loadLiveOperations();
+    } catch (error) {
+        showToast(error.message || 'The project could not be published.');
+        if (trigger) { trigger.disabled = false; trigger.textContent = 'Approve to projects'; }
+    }
 };
 
 const deleteStoredBrief = async (briefId, trigger = null) => {
@@ -364,6 +389,7 @@ document.getElementById('clearStoredBriefs').addEventListener('click', clearStor
 document.getElementById('loadMoreConversations').addEventListener('click', () => loadConversations(true));
 document.getElementById('closeConversationDetail').addEventListener('click', () => { document.getElementById('conversationDetail').hidden = true; });
 document.getElementById('closeBriefDocument').addEventListener('click', () => { document.getElementById('briefDocument').hidden = true; });
+document.getElementById('approveBriefDocument').addEventListener('click', (event) => { if (selectedBrief) approveStoredBrief(selectedBrief.id || selectedBrief.conversationId, event.currentTarget); });
 document.getElementById('downloadBriefJson').addEventListener('click', downloadBriefJson);
 document.getElementById('printBriefDocument').addEventListener('click', () => window.print());
 document.getElementById('deleteBriefDocument').addEventListener('click', (event) => { if (selectedBrief) deleteStoredBrief(selectedBrief.id || selectedBrief.conversationId, event.currentTarget); });
@@ -390,6 +416,13 @@ document.addEventListener('click', (event) => {
     if (briefButton) {
         event.preventDefault();
         openBriefDocument(briefButton.dataset.openBriefId);
+        return;
+    }
+
+    const approveButton = event.target.closest('[data-approve-brief-id]');
+    if (approveButton) {
+        event.preventDefault();
+        approveStoredBrief(approveButton.dataset.approveBriefId, approveButton);
         return;
     }
 

@@ -38,6 +38,23 @@ const finished = [
 
 let projects = initialProjects.map(normalizeProject);
 let supported = JSON.parse(localStorage.getItem('inbestmen_supported_projects') || '[]');
+let modalProjectId = '';
+let lastFocusedElement = null;
+
+const defaultPublicBrief = (project) => ({
+    founderName: '',
+    summary: project.summary || '',
+    problem: 'This project is addressing a community challenge identified during the inBestmen intake process.',
+    beneficiaries: 'The communities and people described in the project proposal.',
+    proposedSolution: project.summary || '',
+    stage: project.status || 'Community review',
+    team: 'The founding team information will be updated as the project progresses.',
+    budgetUsd: Number(project.ibGoal || 0),
+    impact: 'Progress and outcomes will be shared with the community as the project advances.',
+    timeline: 'The project roadmap will be updated by the project team.',
+    risks: 'Delivery, funding and execution risks remain subject to human review and project updates.',
+    strengths: [project.summary || 'A project shared with the inBestmen community.']
+});
 
 function normalizeProject(project) {
     const ibRaised = Math.max(0, Number(String(project.ibRaised ?? project.coins ?? 0).replace(/,/g, '')) || 0);
@@ -48,7 +65,8 @@ function normalizeProject(project) {
         ibRaised,
         ibGoal,
         progress: ibGoal ? Math.min(100, Math.round((ibRaised / ibGoal) * 100)) : 0,
-        proposalUrl: project.proposalUrl || project.url || (project.id ? `project-proposal.html?id=${encodeURIComponent(project.id)}` : '')
+        proposalUrl: Object.prototype.hasOwnProperty.call(project, 'proposalUrl') ? (project.proposalUrl || '') : (project.url || (project.id ? `project-proposal.html?id=${encodeURIComponent(project.id)}` : '')),
+        publicBrief: project.publicBrief || defaultPublicBrief({ ...project, ibGoal })
     };
 }
 
@@ -105,6 +123,8 @@ const setWalletBalance = (balance) => {
     walletBalance = Math.max(0, Number(balance || 0));
     document.querySelectorAll('.balance-value').forEach((element) => { element.textContent = formatNumber(walletBalance); });
     document.getElementById('balanceAmount').textContent = formatNumber(walletBalance);
+    const modalBalance = document.getElementById('projectModalWallet');
+    if (modalBalance) modalBalance.textContent = formatNumber(walletBalance);
 };
 
 const updateImpact = () => {
@@ -117,7 +137,8 @@ const projectCard = (project, isFuture = false) => {
     const proposal = href ? `<a class="btn btn-outline-dark" href="${escapeHtml(href)}"${/^https:\/\//i.test(href) ? ' target="_blank" rel="noopener"' : ''}>View proposal <i class="bi bi-arrow-up-right"></i></a>` : '';
     const goalReached = progress >= 100;
     const donationControls = !isFuture && project.id ? `<div class="donation-controls"><label class="visually-hidden" for="donation-${escapeHtml(project.id)}">iB Coins to donate to ${escapeHtml(project.name)}</label><select id="donation-${escapeHtml(project.id)}" class="donation-amount" data-donation-amount-for="${escapeHtml(project.id)}" aria-label="iB Coins to donate"><option value="1">1 iB</option><option value="2">2 iB</option><option value="5">5 iB</option><option value="10">10 iB</option><option value="25">25 iB</option><option value="50">50 iB</option></select><button class="btn btn-primary" data-donate="${escapeHtml(project.id)}" type="button"${goalReached ? ' disabled' : ''}>${goalReached ? 'Goal reached' : 'Donate'} <i class="bi bi-arrow-right"></i></button></div>` : '';
-    return `<article class="dashboard-project"><div class="project-visual ${escapeHtml(project.visual || 'visual-education')}"><span class="project-category">${escapeHtml(project.category)}</span><span class="project-icon"><i class="bi ${escapeHtml(project.icon || 'bi-globe')}"></i></span></div><div class="dashboard-project-body"><span class="project-status">${escapeHtml(project.status || (project.demo ? 'Example project' : 'Community vote open'))}</span><h3>${escapeHtml(project.name)}</h3><div class="project-location"><i class="bi bi-geo-alt"></i> ${escapeHtml(project.location)}</div><p class="project-summary">${escapeHtml(project.summary)}</p><div class="project-progress-head"><span><strong>${formatNumber(project.ibRaised)}</strong> iB Coins</span><span>${progress}% of goal</span></div><div class="project-progress"><span style="width:${progress}%"></span></div><div class="project-progress-foot"><span>Goal ${formatNumber(project.ibGoal)} iB</span><strong>${isFuture || goalReached ? 'Completed' : 'Accepting support'}</strong></div><div class="project-card-actions"><div class="project-card-links"><button class="listen-button" data-listen="${escapeHtml(project.name)}" type="button"><i class="bi bi-volume-up"></i> Listen to story</button>${proposal}</div>${isFuture ? '<span class="text-muted small">Community milestone</span>' : donationControls}</div></div></article>`;
+    const openProject = project.id ? `<button class="btn btn-outline-dark" data-open-project="${escapeHtml(project.id)}" type="button">Open project <i class="bi bi-arrow-up-right"></i></button>` : '';
+    return `<article class="dashboard-project"><div class="project-visual ${escapeHtml(project.visual || 'visual-education')}"><span class="project-category">${escapeHtml(project.category)}</span><span class="project-icon"><i class="bi ${escapeHtml(project.icon || 'bi-globe')}"></i></span></div><div class="dashboard-project-body"><span class="project-status">${escapeHtml(project.status || (project.demo ? 'Example project' : 'Community vote open'))}</span><h3>${escapeHtml(project.name)}</h3><div class="project-location"><i class="bi bi-geo-alt"></i> ${escapeHtml(project.location)}</div><p class="project-summary">${escapeHtml(project.summary)}</p><div class="project-progress-head"><span><strong>${formatNumber(project.ibRaised)}</strong> iB Coins</span><span>${progress}% of goal</span></div><div class="project-progress"><span style="width:${progress}%"></span></div><div class="project-progress-foot"><span>Goal ${formatNumber(project.ibGoal)} iB</span><strong>${isFuture || goalReached ? 'Completed' : 'Accepting support'}</strong></div><div class="project-card-actions"><div class="project-card-links"><button class="listen-button" data-listen="${escapeHtml(project.name)}" type="button"><i class="bi bi-volume-up"></i> Listen to story</button>${openProject}${proposal}</div>${isFuture ? '<span class="text-muted small">Community milestone</span>' : donationControls}</div></div></article>`;
 };
 
 const renderMyProjects = () => {
@@ -128,6 +149,7 @@ const renderMyProjects = () => {
 
 const bindProjectActions = () => {
     document.querySelectorAll('[data-listen]').forEach((button) => button.addEventListener('click', () => showToast(`ElevenLabs project narration for ${button.dataset.listen} will play here once the project audio is published.`)));
+    document.querySelectorAll('[data-open-project]').forEach((button) => button.addEventListener('click', () => openProjectModal(button.dataset.openProject, button)));
     document.querySelectorAll('[data-donate]').forEach((button) => button.addEventListener('click', () => handleDonation(button.dataset.donate, button)));
 };
 
@@ -183,6 +205,74 @@ const loadSupportedProjects = async () => {
     }
 };
 
+const modalValue = (value, fallback = 'Not captured') => {
+    if (Array.isArray(value)) return value.length ? value.join(', ') : fallback;
+    return String(value ?? '').trim() || fallback;
+};
+
+const openProjectModal = (projectId, trigger = null) => {
+    const project = [...projects, ...finished.map(normalizeProject)].find((item) => item.id === String(projectId));
+    if (!project) return showToast('That project packet is not available right now.');
+    const details = project.publicBrief || defaultPublicBrief(project);
+    const progress = Math.min(100, Number(project.progress ?? 0));
+    const isFuture = finished.some((item) => item.id === project.id);
+    const modal = document.getElementById('projectModal');
+    const proposal = document.getElementById('projectModalProposal');
+    const donateArea = document.getElementById('projectModalDonateArea');
+    const donateButton = document.getElementById('modalDonateButton');
+    const proposalUrl = proposalHref(project);
+    modalProjectId = project.id;
+    lastFocusedElement = trigger || document.activeElement;
+    document.getElementById('projectModalCategory').textContent = project.category || 'Project proposal';
+    document.getElementById('projectModalName').textContent = project.name || 'Project packet';
+    document.getElementById('projectModalLocation').textContent = project.location || 'Location not captured';
+    document.getElementById('projectModalStatus').textContent = project.status || 'Community project';
+    document.getElementById('projectModalSummary').textContent = details.summary || project.summary || 'No public summary has been published yet.';
+    document.getElementById('projectModalProgress').textContent = `${progress}%`;
+    document.getElementById('projectModalBar').style.width = `${progress}%`;
+    document.getElementById('projectModalRaised').textContent = `${formatNumber(project.ibRaised)} iB Coins`;
+    document.getElementById('projectModalGoal').textContent = `Goal ${formatNumber(project.ibGoal)} iB`;
+    const fields = [
+        ['Founder', details.founderName],
+        ['Problem', details.problem],
+        ['Beneficiaries', details.beneficiaries],
+        ['Proposed solution', details.proposedSolution],
+        ['Current stage', details.stage],
+        ['Team', details.team],
+        ['Expected impact', details.impact],
+        ['Timeline', details.timeline],
+        ['Risks and considerations', details.risks]
+    ];
+    document.getElementById('projectModalDetails').innerHTML = fields.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><p>${escapeHtml(modalValue(value))}</p></div>`).join('');
+    document.getElementById('projectModalAiSummary').textContent = details.summary || 'No screening summary has been published yet.';
+    const strengths = Array.isArray(details.strengths) ? details.strengths.filter(Boolean) : [];
+    document.getElementById('projectModalStrengths').innerHTML = strengths.length ? `<ul>${strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<span>No strengths were published in this packet.</span>';
+    document.getElementById('projectModalJson').textContent = JSON.stringify({ project: { id: project.id, name: project.name, category: project.category, location: project.location, status: project.status, ibRaised: project.ibRaised, ibGoal: project.ibGoal }, publicBrief: details }, null, 2);
+    proposal.hidden = !proposalUrl;
+    if (proposalUrl) proposal.href = proposalUrl;
+    donateArea.hidden = isFuture;
+    donateButton.disabled = isFuture || progress >= 100;
+    donateButton.dataset.modalDonate = 'true';
+    donateButton.textContent = progress >= 100 ? 'Goal reached' : 'Donate iB Coins';
+    const icon = document.createElement('i');
+    icon.className = 'bi bi-arrow-right';
+    donateButton.append(' ', icon);
+    document.getElementById('projectModalWallet').textContent = formatNumber(walletBalance);
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('project-modal-open');
+    document.getElementById('closeProjectModal').focus();
+};
+
+const closeProjectModal = () => {
+    const modal = document.getElementById('projectModal');
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('project-modal-open');
+    modalProjectId = '';
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') lastFocusedElement.focus();
+};
+
 const updateProjectFromDonation = (projectData) => {
     const donatedProject = normalizeProject({ ...projectData, ibRaised: projectData.ibRaised ?? projectData.coins, ibGoal: projectData.ibGoal ?? projectData.goal });
     projects = projects.map((project) => project.id === donatedProject.id ? { ...project, ...donatedProject, ibRaised: donatedProject.ibRaised || project.ibRaised, ibGoal: donatedProject.ibGoal || project.ibGoal } : project);
@@ -204,19 +294,21 @@ const handleDemoDonation = (projectId, amount) => {
 };
 
 const handleDonation = async (projectId, button) => {
-    const select = document.querySelector(`[data-donation-amount-for="${CSS.escape(projectId)}"]`);
+    const select = button.dataset.modalDonate ? document.getElementById('modalDonationAmount') : document.querySelector(`[data-donation-amount-for="${CSS.escape(projectId)}"]`);
     const amount = Number(select?.value || 0);
     if (!Number.isInteger(amount) || amount < 1) return;
     button.disabled = true;
     try {
         if (demoMode) {
             handleDemoDonation(projectId, amount);
+            if (!document.getElementById('projectModal').hidden) openProjectModal(projectId);
             return;
         }
         const result = await apiFetch('/api/projects/donate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, amount }) });
         setWalletBalance(result.wallet?.ibBalance || 0);
         updateProjectFromDonation(result.project);
         renderProjects();
+        if (!document.getElementById('projectModal').hidden) openProjectModal(projectId);
         showToast(`${amount} iB Coins sent to ${result.project?.name || 'the project'}.`);
     } catch (error) {
         showToast(error.message || 'The donation could not be completed.');
@@ -229,12 +321,10 @@ const handleDonation = async (projectId, button) => {
 const enterDemoWallet = () => {
     demoSnapshot = { projects, supported: [...supported], walletBalance };
     demoMode = true;
-    setWalletBalance(100);
-    supported = Array.from(new Set([...supported, 'invest-in-inbest']));
-    projects = projects.map((project) => project.id === 'invest-in-inbest' ? normalizeProject({ ...project, ibRaised: project.ibRaised + 25 }) : project);
+    setWalletBalance(21);
     renderProjects();
     setDemoNote();
-    showToast('Sample wallet loaded with 100 iB Coins and a 25 iB example donation.');
+    showToast('Sample wallet loaded with 21 iB Coins. Choose a project to test a fictional donation.');
 };
 
 const exitDemoWallet = () => {
@@ -330,6 +420,10 @@ document.querySelectorAll('[data-amount]').forEach((button) => button.addEventLi
 document.querySelector('[data-amount="1"]')?.classList.add('selected');
 document.querySelectorAll('[data-coming-soon]').forEach((button) => button.addEventListener('click', () => showToast('Transaction history will be connected to Firebase and PayPal in the next build.')));
 document.getElementById('demoWalletButton')?.addEventListener('click', () => demoMode ? exitDemoWallet() : enterDemoWallet());
+document.getElementById('closeProjectModal').addEventListener('click', closeProjectModal);
+document.querySelector('[data-close-project]').addEventListener('click', closeProjectModal);
+document.getElementById('modalDonateButton').addEventListener('click', (event) => { if (modalProjectId) handleDonation(modalProjectId, event.currentTarget); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !document.getElementById('projectModal').hidden) closeProjectModal(); });
 document.getElementById('sidebarOpen').addEventListener('click', () => document.getElementById('dashboardSidebar').classList.add('open'));
 document.getElementById('sidebarClose').addEventListener('click', () => document.getElementById('dashboardSidebar').classList.remove('open'));
 document.getElementById('signOut').addEventListener('click', async () => { if (auth) await signOut(auth); localStorage.removeItem('inbestmen_user'); window.location.href = 'auth.html'; });

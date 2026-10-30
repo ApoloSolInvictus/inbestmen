@@ -94,7 +94,7 @@ Every active project card in **inBest Projects** now includes:
 
 The catalog endpoint is `/api/projects/list` and the signed-in user's support history is `/api/projects/support`. Both routes require a Firebase ID token. The donation endpoint rejects insufficient balances, invalid amounts and contributions that would exceed the approved project goal. The server uses a Firestore optimistic commit so the wallet and project total move together.
 
-For a safe visual walkthrough, the wallet has **Try sample wallet**. It loads 100 example iB Coins and a 25 iB example donation entirely in the browser. The UI labels this mode clearly and never calls PayPal or Firestore while it is active. Exit sample wallet before testing a real authenticated wallet.
+For a safe visual walkthrough, the wallet has **Try sample wallet**. It loads 21 example iB Coins entirely in the browser so a test donation can visibly reduce the balance and increase a project total. The UI labels this mode clearly and never calls PayPal or Firestore while it is active. Exit sample wallet before testing a real authenticated wallet.
 
 ## 7. Telegram project intake
 
@@ -182,6 +182,8 @@ For future conversations, keep the `post_call_transcription` webhook enabled wit
 The board packet shown in the admin console includes the structured JSON, transcript metadata, AI review and screening status. It is an operational evidence document only. A licensed accountant and qualified legal counsel must validate tax, accounting, securities, privacy and regulatory conclusions before any investor presentation, fundraising or payout.
 
 From **Project review**, **Open packet** displays the board summary, captured founder/project fields, ElevenLabs transcript and the complete source JSON. **Remove from list** deletes only the stored Firestore brief and records its conversation ID as ignored, so a later Sync calls action will not re-import it. The original ElevenLabs conversation is preserved in ElevenLabs for audit history.
+
+When a brief has status `pending_human_review`, the Admin packet also shows **Approve to projects**. That protected action writes the decision to the brief, creates `projects/{projectId}` and publishes a public-safe packet for the user Dashboard. It intentionally excludes founder email, Telegram identifiers and the raw transcript from the public packet; the Admin retains the complete JSON and evidence.
 
 ## 13. Local preview
 
