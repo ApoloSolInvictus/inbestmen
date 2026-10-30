@@ -34,6 +34,13 @@
     let googleScriptAttempts = 0;
     let landingRefreshTimer = null;
     let lastLandingRefresh = 0;
+    let landingTranslationToken = 0;
+    let landingTranslationTimer = null;
+    const landingTextOriginals = new WeakMap();
+    const landingAttributeOriginals = new WeakMap();
+    const trackedLandingTextNodes = new Set();
+    const trackedLandingAttributes = new Set();
+    const landingTranslationCache = new Map();
 
     const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const getPathLanguage = () => {
@@ -188,6 +195,13 @@
         setGoogleLanguageCookie(code);
         if (hadCorrectCookie) window.sessionStorage.removeItem(`inbestmen_translate_refresh_${code}`);
 
+        if (isLandingPath()) {
+            pendingLanguage = null;
+            refreshLanguageOptions();
+            scheduleLandingContentTranslation();
+            return;
+        }
+
         const select = getGoogleSelect();
         if (!select || select.options.length < 2) {
             waitForGoogleSelect();
@@ -218,6 +232,162 @@
             return;
         }
         setGoogleLanguage(language, { reload: false });
+    }
+
+    function isLandingTranslationExcluded(element) {
+        return !element || Boolean(element.closest('[data-translate-switcher], #google_translate_element, script, style, noscript, template, code, pre, .notranslate, [translate="no"], .goog-te-gadget, .skiptranslate'));
+    }
+
+    function getLandingTextNodes() {
+        const root = document.body;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        let node;
+        while ((node = walker.nextNode())) {
+            if (isLandingTranslationExcluded(node.parentElement)) continue;
+            const value = node.nodeValue || '';
+            if (value.trim().length < 2 || !/[A-Za-z]/.test(value)) continue;
+            if (!landingTextOriginals.has(node)) {
+                landingTextOriginals.set(node, value);
+                trackedLandingTextNodes.add(node);
+            }
+            nodes.push(node);
+        }
+        return nodes;
+    }
+
+    function getLandingAttributes() {
+        const root = document.body;
+        const elements = root.querySelectorAll('img[alt], [title], [aria-label], input[placeholder], textarea[placeholder]');
+        const entries = [];
+        elements.forEach((element) => {
+            if (isLandingTranslationExcluded(element)) return;
+            ['alt', 'title', 'aria-label', 'placeholder'].forEach((name) => {
+                if (!element.hasAttribute(name)) return;
+                const value = element.getAttribute(name) || '';
+                if (value.trim().length < 2 || !/[A-Za-z]/.test(value)) return;
+                let originals = landingAttributeOriginals.get(element);
+                if (!originals) {
+                    originals = new Map();
+                    landingAttributeOriginals.set(element, originals);
+                }
+                if (!originals.has(name)) {
+                    originals.set(name, value);
+                    trackedLandingAttributes.add({ element, name });
+                }
+                entries.push({ element, name, value: originals.get(name) });
+            });
+        });
+        return entries;
+    }
+
+    function restoreLandingOriginal() {
+        trackedLandingTextNodes.forEach((node) => {
+            if (node.isConnected && landingTextOriginals.has(node)) node.nodeValue = landingTextOriginals.get(node);
+        });
+        trackedLandingAttributes.forEach(({ element, name }) => {
+            const originals = landingAttributeOriginals.get(element);
+            if (element.isConnected && originals?.has(name)) element.setAttribute(name, originals.get(name));
+        });
+        document.documentElement.lang = 'en';
+    }
+
+    function parseGoogleTranslation(payload) {
+        if (!Array.isArray(payload?.[0])) return '';
+        return payload[0].map((part) => Array.isArray(part) ? String(part[0] || '') : '').join('');
+    }
+
+    async function translateLandingBatch(values, language, batchNumber) {
+        const marker = `@@INBESTMEN_SPLIT_${batchNumber}@@`;
+        const source = values.join(` ${marker} `);
+        const cacheKey = `${language}|${source}`;
+        if (landingTranslationCache.has(cacheKey)) return landingTranslationCache.get(cacheKey);
+        const endpoints = ['https://translate.googleapis.com', 'https://translate.google.com'];
+        let payload = null;
+        for (const endpoint of endpoints) {
+            try {
+                const url = `${endpoint}/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(language)}&dt=t&q=${encodeURIComponent(source)}`;
+                const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                if (!response.ok) continue;
+                const body = await response.text();
+                payload = JSON.parse(body);
+                break;
+            } catch (error) {
+                if (endpoint === endpoints[endpoints.length - 1]) throw error;
+            }
+        }
+        const translated = parseGoogleTranslation(payload);
+        const parts = translated.split(marker).map((value) => value.trim());
+        const result = parts.length === values.length ? parts : null;
+        landingTranslationCache.set(cacheKey, result);
+        return result;
+    }
+
+    async function translateLandingEntries(entries, language, token) {
+        const batches = [];
+        let batch = [];
+        let length = 0;
+        entries.forEach((entry) => {
+            const value = entry.value;
+            if (batch.length && (batch.length >= 8 || length + value.length > 2200)) {
+                batches.push(batch);
+                batch = [];
+                length = 0;
+            }
+            batch.push(entry);
+            length += value.length;
+        });
+        if (batch.length) batches.push(batch);
+
+        for (let index = 0; index < batches.length; index += 1) {
+            if (token !== landingTranslationToken) return;
+            const current = batches[index];
+            let translated = await translateLandingBatch(current.map((entry) => entry.value), language, index);
+            if (!translated) {
+                translated = [];
+                for (const entry of current) {
+                    const single = await translateLandingBatch([entry.value], language, `${index}-${translated.length}`);
+                    translated.push(single?.[0] || entry.value);
+                }
+            }
+            current.forEach((entry, entryIndex) => {
+                if (token !== landingTranslationToken) return;
+                const value = translated?.[entryIndex];
+                if (typeof value !== 'string') return;
+                if (entry.node) {
+                    const original = entry.node.nodeValue || '';
+                    const leading = original.match(/^\s*/)?.[0] || '';
+                    const trailing = original.match(/\s*$/)?.[0] || '';
+                    entry.node.nodeValue = `${leading}${value.trim()}${trailing}`;
+                } else if (entry.element?.isConnected) {
+                    entry.element.setAttribute(entry.name, value);
+                }
+            });
+        }
+    }
+
+    async function translateLandingContent(language) {
+        if (!isLandingPath()) return;
+        const token = ++landingTranslationToken;
+        if (language === 'en') {
+            restoreLandingOriginal();
+            return;
+        }
+        document.documentElement.lang = language;
+        const textEntries = getLandingTextNodes().map((node) => ({ node, value: landingTextOriginals.get(node) }));
+        const attributeEntries = getLandingAttributes();
+        try {
+            await translateLandingEntries([...textEntries, ...attributeEntries], language, token);
+        } catch (error) {
+            if (token === landingTranslationToken) console.warn('Landing translation is unavailable.', error);
+        }
+    }
+
+    function scheduleLandingContentTranslation() {
+        if (!isLandingPath()) return;
+        window.clearTimeout(landingTranslationTimer);
+        const language = getSavedLanguage();
+        landingTranslationTimer = window.setTimeout(() => translateLandingContent(language), 180);
     }
 
     function refreshLandingTranslation() {
@@ -396,11 +566,13 @@
             if (!isLandingPath()) return;
             window.clearTimeout(landingRefreshTimer);
             landingRefreshTimer = window.setTimeout(refreshLandingTranslation, 250);
+            scheduleLandingContentTranslation();
         });
-        loadGoogleTranslate();
+        if (!isLandingPath()) loadGoogleTranslate();
         window.setTimeout(hideGoogleChrome, 250);
         window.setTimeout(hideGoogleChrome, 1000);
         scheduleLandingTranslation();
+        scheduleLandingContentTranslation();
         if (googleReady) applyPendingLanguage();
     }
 
