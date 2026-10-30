@@ -5,61 +5,270 @@ const config = window.INBESTMEN_FIREBASE_CONFIG;
 const configReady = config && config.apiKey && !config.apiKey.includes('YOUR_');
 let auth = null;
 if (configReady) auth = getAuth(initializeApp(config));
+
 let currentUser = null;
 let selectedAmount = 1;
 let paypalRendered = false;
 let paypalSdkPromise = null;
+let walletBalance = 0;
+let demoMode = false;
+let demoSnapshot = null;
 
-const demoUser = JSON.parse(localStorage.getItem('inbestmen_user') || '{"name":"Guest Member","email":"Preview mode"}');
-const userName = document.getElementById('userName'); const userEmail = document.getElementById('userEmail'); const welcomeName = document.getElementById('welcomeName'); const userAvatar = document.getElementById('userAvatar');
-const setUser = (user) => { const name = user?.displayName || user?.email?.split('@')[0] || demoUser.name; const email = user?.email || demoUser.email; userName.textContent = name; userEmail.textContent = email; welcomeName.textContent = name.split(' ')[0]; userAvatar.textContent = name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase(); };
-setUser(configReady ? null : demoUser);
+const demoUser = JSON.parse(localStorage.getItem('inbestmen_user') || '{"name":"Preview Member","email":"Preview mode"}');
+const userName = document.getElementById('userName');
+const userEmail = document.getElementById('userEmail');
+const welcomeName = document.getElementById('welcomeName');
+const userAvatar = document.getElementById('userAvatar');
+const projectGrid = document.getElementById('projectGrid');
+const myProjectGrid = document.getElementById('myProjectGrid');
+const futureGrid = document.getElementById('futureGrid');
 
-if (auth) onAuthStateChanged(auth, (user) => { if (user) { currentUser = user; setUser(user); loadWallet(); loadPayPalCheckout(); } else { window.location.href = 'auth.html'; } });
-
-const projects = [
-    { id: 'invest-in-inbest', name: 'Invest in inBest', category: 'Global organization', location: 'Worldwide', summary: 'The first official inBestmen campaign: build the people, technology and trust layer for a global social investment platform.', coins: '0', goal: '1,000,000', progress: 0, visual: 'visual-education', icon: 'bi-globe', status: 'Official launch proposal', url: 'https://inbestproject.wstudio3d.com/' },
-    { id: 'blueloop', name: 'BlueLoop', category: 'Water / Climate', location: 'Nairobi, Kenya', summary: 'Solar-powered water kiosks with local ownership for neighborhoods existing infrastructure misses.', coins: '8,640', goal: '12,000', progress: 72, visual: 'visual-water', icon: 'bi-droplet-half', status: 'Community vote open' },
-    { id: 'orbit-school', name: 'Orbit School', category: 'Education / AI', location: 'Medellín, Colombia', summary: 'A low-bandwidth learning network that gives young people a personal guide to new skills.', coins: '5,230', goal: '10,000', progress: 52, visual: 'visual-education', icon: 'bi-stars', status: 'Community vote open' },
-    { id: 'root-rise', name: 'Root & Rise', category: 'Food / Regeneration', location: 'Lisbon, Portugal', summary: 'Turning small urban spaces into productive, community-owned food gardens.', coins: '3,980', goal: '8,000', progress: 49, visual: 'visual-food', icon: 'bi-flower1', status: 'Community vote open' },
-    { id: 'care-circle', name: 'Care Circle', category: 'Health / Wellbeing', location: 'Manila, Philippines', summary: 'A neighborhood care network that makes practical support easier to find and share.', coins: '6,710', goal: '9,000', progress: 75, visual: 'visual-health', icon: 'bi-heart-pulse', status: 'Community vote open' }
+const initialProjects = [
+    { id: 'invest-in-inbest', name: 'Invest in inBest', category: 'Global organization', location: 'Worldwide', summary: 'The first official inBestmen campaign: build the people, technology and trust layer for a global social investment platform.', ibRaised: 12500, ibGoal: 1000000, visual: 'visual-education', icon: 'bi-globe', status: 'Example launch proposal', proposalUrl: 'https://inbestproject.wstudio3d.com/', demo: true },
+    { id: 'blueloop', name: 'BlueLoop', category: 'Water / Climate', location: 'Nairobi, Kenya', summary: 'Solar-powered water kiosks with local ownership for neighborhoods existing infrastructure misses.', ibRaised: 8640, ibGoal: 12000, visual: 'visual-water', icon: 'bi-droplet-half', status: 'Example community vote', proposalUrl: 'project-proposal.html?id=blueloop', demo: true },
+    { id: 'orbit-school', name: 'Orbit School', category: 'Education / AI', location: 'Medellín, Colombia', summary: 'A low-bandwidth learning network that gives young people a personal guide to new skills.', ibRaised: 5230, ibGoal: 10000, visual: 'visual-education', icon: 'bi-stars', status: 'Example community vote', proposalUrl: 'project-proposal.html?id=orbit-school', demo: true },
+    { id: 'root-rise', name: 'Root & Rise', category: 'Food / Regeneration', location: 'Lisbon, Portugal', summary: 'Turning small urban spaces into productive, community-owned food gardens.', ibRaised: 3980, ibGoal: 8000, visual: 'visual-food', icon: 'bi-flower1', status: 'Example community vote', proposalUrl: 'project-proposal.html?id=root-rise', demo: true },
+    { id: 'care-circle', name: 'Care Circle', category: 'Health / Wellbeing', location: 'Manila, Philippines', summary: 'A neighborhood care network that makes practical support easier to find and share.', ibRaised: 6710, ibGoal: 9000, visual: 'visual-health', icon: 'bi-heart-pulse', status: 'Example community vote', proposalUrl: 'project-proposal.html?id=care-circle', demo: true }
 ];
+
 const finished = [
-    { name: 'Solar Commons', category: 'Energy / Community', location: 'Mombasa, Kenya', summary: 'Community-owned solar charging hubs are now serving three neighborhoods.', coins: '14,200', goal: '14,000', progress: 100, visual: 'visual-water', icon: 'bi-sun', status: 'Goal reached' },
-    { name: 'Makers of Tomorrow', category: 'Education / Access', location: 'Oaxaca, Mexico', summary: 'A shared workshop now gives local makers tools, training and a place to teach.', coins: '9,800', goal: '9,800', progress: 100, visual: 'visual-education', icon: 'bi-lightbulb', status: 'Goal reached' }
+    { id: 'solar-commons', name: 'Solar Commons', category: 'Energy / Community', location: 'Mombasa, Kenya', summary: 'Community-owned solar charging hubs are now serving three neighborhoods.', ibRaised: 14200, ibGoal: 14000, visual: 'visual-water', icon: 'bi-sun', status: 'Goal reached', proposalUrl: 'project-proposal.html?id=solar-commons' },
+    { id: 'makers-of-tomorrow', name: 'Makers of Tomorrow', category: 'Education / Access', location: 'Oaxaca, Mexico', summary: 'A shared workshop now gives local makers tools, training and a place to teach.', ibRaised: 9800, ibGoal: 9800, visual: 'visual-education', icon: 'bi-lightbulb', status: 'Goal reached', proposalUrl: 'project-proposal.html?id=makers-of-tomorrow' }
 ];
+
+let projects = initialProjects.map(normalizeProject);
 let supported = JSON.parse(localStorage.getItem('inbestmen_supported_projects') || '[]');
 
-const projectCard = (project, isFuture = false) => `<article class="dashboard-project"><div class="project-visual ${project.visual}"><span class="project-category">${project.category}</span><span class="project-icon"><i class="bi ${project.icon}"></i></span></div><div class="dashboard-project-body"><span class="project-status">${project.status}</span><h3>${project.name}</h3><div class="project-location"><i class="bi bi-geo-alt"></i> ${project.location}</div><p class="project-summary">${project.summary}</p><div class="project-progress-head"><span><strong>${project.coins}</strong> iB Coins</span><span>${project.progress}% of goal</span></div><div class="project-progress"><span style="width:${project.progress}%"></span></div><div class="project-progress-foot"><span>Goal ${project.goal} iB</span><strong>${isFuture ? 'Completed' : 'Accepting support'}</strong></div><div class="project-card-actions"><button class="listen-button" data-listen="${project.name}"><i class="bi bi-volume-up"></i> Listen to story</button>${project.url ? `<a class="btn btn-outline-dark" href="${project.url}" target="_blank" rel="noopener">View proposal</a>` : isFuture ? '<span class="text-muted small">Community milestone</span>' : `<button class="btn btn-primary" data-support="${project.id}">${supported.includes(project.id) ? 'Supported ✓' : 'Support project'}</button>`}</div></div></article>`;
-const projectGrid = document.getElementById('projectGrid'); const myProjectGrid = document.getElementById('myProjectGrid'); const futureGrid = document.getElementById('futureGrid');
-projectGrid.innerHTML = projects.map(projectCard).join(''); futureGrid.innerHTML = finished.map((project) => projectCard(project, true)).join('');
-const renderMyProjects = () => { const selected = projects.filter((project) => supported.includes(project.id)); myProjectGrid.innerHTML = selected.map(projectCard).join(''); document.getElementById('myEmptyState').classList.toggle('show', selected.length === 0); };
-renderMyProjects();
+function normalizeProject(project) {
+    const ibRaised = Math.max(0, Number(String(project.ibRaised ?? project.coins ?? 0).replace(/,/g, '')) || 0);
+    const ibGoal = Math.max(0, Number(String(project.ibGoal ?? project.goal ?? 0).replace(/,/g, '')) || 0);
+    return {
+        ...project,
+        id: String(project.id || '').trim(),
+        ibRaised,
+        ibGoal,
+        progress: ibGoal ? Math.min(100, Math.round((ibRaised / ibGoal) * 100)) : 0,
+        proposalUrl: project.proposalUrl || project.url || (project.id ? `project-proposal.html?id=${encodeURIComponent(project.id)}` : '')
+    };
+}
 
-const showToast = (message) => { const toast = document.getElementById('toast'); toast.textContent = message; toast.classList.add('show'); window.setTimeout(() => toast.classList.remove('show'), 3500); };
-const setPaymentNote = (message, tone = '') => { const note = document.getElementById('paymentNote'); note.innerHTML = `<i class="bi bi-${tone === 'error' ? 'exclamation-triangle' : tone === 'success' ? 'check-circle' : 'lock'}"></i> ${message}`; note.className = `payment-note${tone ? ` ${tone}` : ''}`; };
-const setWalletBalance = (balance) => { document.querySelectorAll('.balance-value').forEach((element) => { element.textContent = Number(balance || 0).toLocaleString(); }); document.getElementById('balanceAmount').textContent = Number(balance || 0).toLocaleString(); };
-const apiFetch = async (path, options = {}) => { if (!currentUser) throw new Error('Sign in to use your inBestmen wallet.'); const token = await currentUser.getIdToken(); const response = await fetch(path, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, Accept: 'application/json' } }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status}).`); return body; };
-const loadWallet = async () => { try { const data = await apiFetch('/api/wallet'); setWalletBalance(data.wallet?.ibBalance || 0); } catch (error) { setPaymentNote(error.message || 'Your wallet could not be loaded.', 'error'); } };
-const loadPayPalSdk = (config) => {
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character]);
+}
+
+function proposalHref(project) {
+    const value = String(project.proposalUrl || '').trim();
+    if (!value) return '';
+    if (/^https:\/\//i.test(value) || /^(?:project-proposal\.html|https?:\/\/)/i.test(value)) return value;
+    return '';
+}
+
+function formatNumber(value) {
+    return Number(value || 0).toLocaleString('en-US');
+}
+
+const setUser = (user) => {
+    const name = user?.displayName || user?.email?.split('@')[0] || demoUser.name;
+    const email = user?.email || demoUser.email;
+    userName.textContent = name;
+    userEmail.textContent = email;
+    welcomeName.textContent = name.split(' ')[0];
+    userAvatar.textContent = name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+};
+
+setUser(configReady ? null : demoUser);
+
+const showToast = (message) => {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    window.setTimeout(() => toast.classList.remove('show'), 3500);
+};
+
+const setPaymentNote = (message, tone = '') => {
+    const note = document.getElementById('paymentNote');
+    note.innerHTML = `<i class="bi bi-${tone === 'error' ? 'exclamation-triangle' : tone === 'success' ? 'check-circle' : 'lock'}"></i> ${escapeHtml(message)}`;
+    note.className = `payment-note${tone ? ` ${tone}` : ''}`;
+};
+
+const setDemoNote = () => {
+    const note = document.getElementById('demoModeNote');
+    const button = document.getElementById('demoWalletButton');
+    if (note) {
+        note.hidden = !demoMode;
+        note.textContent = demoMode ? 'Example mode only — this wallet and these donations do not move real money.' : '';
+    }
+    if (button) button.textContent = demoMode ? 'Exit sample wallet' : 'Try sample wallet';
+};
+
+const setWalletBalance = (balance) => {
+    walletBalance = Math.max(0, Number(balance || 0));
+    document.querySelectorAll('.balance-value').forEach((element) => { element.textContent = formatNumber(walletBalance); });
+    document.getElementById('balanceAmount').textContent = formatNumber(walletBalance);
+};
+
+const updateImpact = () => {
+    document.getElementById('impactProjects').textContent = supported.length;
+};
+
+const projectCard = (project, isFuture = false) => {
+    const progress = Math.min(100, Number(project.progress ?? 0));
+    const href = proposalHref(project);
+    const proposal = href ? `<a class="btn btn-outline-dark" href="${escapeHtml(href)}"${/^https:\/\//i.test(href) ? ' target="_blank" rel="noopener"' : ''}>View proposal <i class="bi bi-arrow-up-right"></i></a>` : '';
+    const goalReached = progress >= 100;
+    const donationControls = !isFuture && project.id ? `<div class="donation-controls"><label class="visually-hidden" for="donation-${escapeHtml(project.id)}">iB Coins to donate to ${escapeHtml(project.name)}</label><select id="donation-${escapeHtml(project.id)}" class="donation-amount" data-donation-amount-for="${escapeHtml(project.id)}" aria-label="iB Coins to donate"><option value="1">1 iB</option><option value="2">2 iB</option><option value="5">5 iB</option><option value="10">10 iB</option><option value="25">25 iB</option><option value="50">50 iB</option></select><button class="btn btn-primary" data-donate="${escapeHtml(project.id)}" type="button"${goalReached ? ' disabled' : ''}>${goalReached ? 'Goal reached' : 'Donate'} <i class="bi bi-arrow-right"></i></button></div>` : '';
+    return `<article class="dashboard-project"><div class="project-visual ${escapeHtml(project.visual || 'visual-education')}"><span class="project-category">${escapeHtml(project.category)}</span><span class="project-icon"><i class="bi ${escapeHtml(project.icon || 'bi-globe')}"></i></span></div><div class="dashboard-project-body"><span class="project-status">${escapeHtml(project.status || (project.demo ? 'Example project' : 'Community vote open'))}</span><h3>${escapeHtml(project.name)}</h3><div class="project-location"><i class="bi bi-geo-alt"></i> ${escapeHtml(project.location)}</div><p class="project-summary">${escapeHtml(project.summary)}</p><div class="project-progress-head"><span><strong>${formatNumber(project.ibRaised)}</strong> iB Coins</span><span>${progress}% of goal</span></div><div class="project-progress"><span style="width:${progress}%"></span></div><div class="project-progress-foot"><span>Goal ${formatNumber(project.ibGoal)} iB</span><strong>${isFuture || goalReached ? 'Completed' : 'Accepting support'}</strong></div><div class="project-card-actions"><div class="project-card-links"><button class="listen-button" data-listen="${escapeHtml(project.name)}" type="button"><i class="bi bi-volume-up"></i> Listen to story</button>${proposal}</div>${isFuture ? '<span class="text-muted small">Community milestone</span>' : donationControls}</div></div></article>`;
+};
+
+const renderMyProjects = () => {
+    const selected = projects.filter((project) => supported.includes(project.id));
+    myProjectGrid.innerHTML = selected.map((project) => projectCard(project)).join('');
+    document.getElementById('myEmptyState').classList.toggle('show', selected.length === 0);
+};
+
+const bindProjectActions = () => {
+    document.querySelectorAll('[data-listen]').forEach((button) => button.addEventListener('click', () => showToast(`ElevenLabs project narration for ${button.dataset.listen} will play here once the project audio is published.`)));
+    document.querySelectorAll('[data-donate]').forEach((button) => button.addEventListener('click', () => handleDonation(button.dataset.donate, button)));
+};
+
+const renderProjects = () => {
+    projectGrid.innerHTML = projects.map((project) => projectCard(project)).join('');
+    futureGrid.innerHTML = finished.map((project) => projectCard(normalizeProject(project), true)).join('');
+    renderMyProjects();
+    bindProjectActions();
+    updateImpact();
+};
+
+renderProjects();
+
+const apiFetch = async (path, options = {}) => {
+    if (!currentUser) throw new Error('Sign in to use your inBestmen wallet.');
+    const token = await currentUser.getIdToken();
+    const response = await fetch(path, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `Request failed (${response.status}).`);
+    return body;
+};
+
+const loadWallet = async () => {
+    try {
+        const data = await apiFetch('/api/wallet');
+        setWalletBalance(data.wallet?.ibBalance || 0);
+    } catch (error) {
+        setPaymentNote(error.message || 'Your wallet could not be loaded.', 'error');
+    }
+};
+
+const loadProjects = async () => {
+    try {
+        const data = await apiFetch('/api/projects/list');
+        if (Array.isArray(data.projects)) {
+            projects = data.projects.map(normalizeProject);
+            renderProjects();
+        }
+    } catch (error) {
+        showToast('Showing the project catalog. Live project data will appear when Firestore is connected.');
+        console.warn(error);
+    }
+};
+
+const loadSupportedProjects = async () => {
+    try {
+        const data = await apiFetch('/api/projects/support');
+        supported = (Array.isArray(data.support) ? data.support : []).filter((item) => Number(item.ibDonated || 0) > 0).map((item) => String(item.projectId || item.id));
+        localStorage.setItem('inbestmen_supported_projects', JSON.stringify(supported));
+        renderProjects();
+    } catch (error) {
+        console.warn(error);
+    }
+};
+
+const updateProjectFromDonation = (projectData) => {
+    const donatedProject = normalizeProject({ ...projectData, ibRaised: projectData.ibRaised ?? projectData.coins, ibGoal: projectData.ibGoal ?? projectData.goal });
+    projects = projects.map((project) => project.id === donatedProject.id ? { ...project, ...donatedProject, ibRaised: donatedProject.ibRaised || project.ibRaised, ibGoal: donatedProject.ibGoal || project.ibGoal } : project);
+    if (!projects.some((project) => project.id === donatedProject.id)) projects = [...projects, donatedProject];
+    supported = Array.from(new Set([...supported, donatedProject.id]));
+    localStorage.setItem('inbestmen_supported_projects', JSON.stringify(supported));
+};
+
+const handleDemoDonation = (projectId, amount) => {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) throw new Error('That project is not available.');
+    if (amount > walletBalance) throw new Error(`Your sample wallet has ${walletBalance} iB Coins available.`);
+    if (project.ibGoal && project.ibRaised + amount > project.ibGoal) throw new Error(`Only ${project.ibGoal - project.ibRaised} iB Coins remain before this project reaches its goal.`);
+    projects = projects.map((item) => item.id === projectId ? normalizeProject({ ...item, ibRaised: item.ibRaised + amount }) : item);
+    setWalletBalance(walletBalance - amount);
+    updateProjectFromDonation(projects.find((item) => item.id === projectId));
+    renderProjects();
+    showToast(`${amount} iB Coins added to ${project.name}. Example mode only.`);
+};
+
+const handleDonation = async (projectId, button) => {
+    const select = document.querySelector(`[data-donation-amount-for="${CSS.escape(projectId)}"]`);
+    const amount = Number(select?.value || 0);
+    if (!Number.isInteger(amount) || amount < 1) return;
+    button.disabled = true;
+    try {
+        if (demoMode) {
+            handleDemoDonation(projectId, amount);
+            return;
+        }
+        const result = await apiFetch('/api/projects/donate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, amount }) });
+        setWalletBalance(result.wallet?.ibBalance || 0);
+        updateProjectFromDonation(result.project);
+        renderProjects();
+        showToast(`${amount} iB Coins sent to ${result.project?.name || 'the project'}.`);
+    } catch (error) {
+        showToast(error.message || 'The donation could not be completed.');
+        setPaymentNote(error.message || 'The donation could not be completed.', 'error');
+    } finally {
+        button.disabled = false;
+    }
+};
+
+const enterDemoWallet = () => {
+    demoSnapshot = { projects, supported: [...supported], walletBalance };
+    demoMode = true;
+    setWalletBalance(100);
+    supported = Array.from(new Set([...supported, 'invest-in-inbest']));
+    projects = projects.map((project) => project.id === 'invest-in-inbest' ? normalizeProject({ ...project, ibRaised: project.ibRaised + 25 }) : project);
+    renderProjects();
+    setDemoNote();
+    showToast('Sample wallet loaded with 100 iB Coins and a 25 iB example donation.');
+};
+
+const exitDemoWallet = () => {
+    if (!demoSnapshot) return;
+    ({ projects, supported, walletBalance } = demoSnapshot);
+    demoSnapshot = null;
+    demoMode = false;
+    setWalletBalance(walletBalance);
+    renderProjects();
+    setDemoNote();
+    if (currentUser) loadWallet();
+    showToast('Returned to your real wallet.');
+};
+
+const loadPayPalSdk = (paypalConfig) => {
     if (window.paypal) return Promise.resolve(window.paypal);
     if (paypalSdkPromise) return paypalSdkPromise;
     paypalSdkPromise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.id = 'paypal-js-sdk';
-        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(config.clientId)}&currency=${encodeURIComponent(config.currency)}&intent=capture&components=buttons`;
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(paypalConfig.clientId)}&currency=${encodeURIComponent(paypalConfig.currency)}&intent=capture&components=buttons`;
         script.onload = () => resolve(window.paypal);
         script.onerror = () => reject(new Error('PayPal checkout could not be loaded.'));
         document.head.appendChild(script);
     });
     return paypalSdkPromise;
 };
+
 const loadPayPalCheckout = async () => {
     if (!currentUser || paypalRendered) return;
     const container = document.getElementById('paypalButtonContainer');
     try {
-        const config = await apiFetch('/api/paypal/config');
-        const paypal = await loadPayPalSdk(config);
+        const paypalConfig = await apiFetch('/api/paypal/config');
+        const paypal = await loadPayPalSdk(paypalConfig);
         if (!paypal?.Buttons) throw new Error('PayPal checkout is unavailable right now.');
         container.hidden = false;
         await paypal.Buttons({
@@ -86,15 +295,44 @@ const loadPayPalCheckout = async () => {
         setPaymentNote(error.message || 'PayPal checkout is not configured yet.', 'error');
     }
 };
-const setView = (view) => { document.querySelectorAll('.dashboard-view').forEach((panel) => panel.classList.toggle('active', panel.dataset.viewPanel === view)); document.querySelectorAll('.dashboard-nav-link').forEach((link) => link.classList.toggle('active', link.dataset.view === view)); const active = document.querySelector(`[data-view-panel="${view}"]`); document.getElementById('pageTitle').textContent = document.querySelector(`[data-view="${view}"] span`)?.textContent || 'Home'; window.scrollTo({ top: 0, behavior: 'smooth' }); if (active) active.querySelectorAll('[data-support]').forEach(bindSupport); };
+
+const setView = (view, updateHash = true) => {
+    const validView = document.querySelector(`[data-view-panel="${CSS.escape(view)}"]`) ? view : 'overview';
+    document.querySelectorAll('.dashboard-view').forEach((panel) => panel.classList.toggle('active', panel.dataset.viewPanel === validView));
+    document.querySelectorAll('.dashboard-nav-link').forEach((link) => link.classList.toggle('active', link.dataset.view === validView));
+    document.getElementById('pageTitle').textContent = document.querySelector(`[data-view="${CSS.escape(validView)}"] span`)?.textContent || 'Home';
+    if (updateHash) window.history.replaceState(null, '', `#${validView}`);
+    document.getElementById('dashboardSidebar').classList.remove('open');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+if (auth) onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        setUser(user);
+        loadWallet();
+        loadPayPalCheckout();
+        loadProjects();
+        loadSupportedProjects();
+    } else {
+        window.location.href = 'auth.html';
+    }
+});
+
 document.querySelectorAll('.dashboard-nav-link').forEach((link) => link.addEventListener('click', () => setView(link.dataset.view)));
 document.querySelectorAll('[data-open-view]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); setView(button.dataset.openView); }));
-const bindSupport = (button) => button.addEventListener('click', () => { const id = button.dataset.support; if (!supported.includes(id)) { supported.push(id); localStorage.setItem('inbestmen_supported_projects', JSON.stringify(supported)); renderMyProjects(); document.getElementById('impactProjects').textContent = supported.length; showToast('Project added to My inBest. Your signal is now part of its journey.'); button.textContent = 'Supported ✓'; } });
-document.querySelectorAll('[data-support]').forEach(bindSupport);
-document.querySelectorAll('[data-listen]').forEach((button) => button.addEventListener('click', () => showToast(`ElevenLabs project narration for ${button.dataset.listen} will play here once the agent is connected.`)));
-document.querySelectorAll('[data-amount]').forEach((button) => button.addEventListener('click', () => { selectedAmount = Number(button.dataset.amount); document.querySelectorAll('[data-amount]').forEach((item) => item.classList.remove('selected')); button.classList.add('selected'); setPaymentNote(`PayPal is ready. Selected package: $${selectedAmount} = ${selectedAmount} iB Coins.`); }));
+document.querySelectorAll('[data-amount]').forEach((button) => button.addEventListener('click', () => {
+    selectedAmount = Number(button.dataset.amount);
+    document.querySelectorAll('[data-amount]').forEach((item) => item.classList.remove('selected'));
+    button.classList.add('selected');
+    setPaymentNote(`PayPal is ready. Selected package: $${selectedAmount} = ${selectedAmount} iB Coins.`);
+}));
 document.querySelector('[data-amount="1"]')?.classList.add('selected');
 document.querySelectorAll('[data-coming-soon]').forEach((button) => button.addEventListener('click', () => showToast('Transaction history will be connected to Firebase and PayPal in the next build.')));
-document.getElementById('impactProjects').textContent = supported.length;
-document.getElementById('sidebarOpen').addEventListener('click', () => document.getElementById('dashboardSidebar').classList.add('open')); document.getElementById('sidebarClose').addEventListener('click', () => document.getElementById('dashboardSidebar').classList.remove('open'));
+document.getElementById('demoWalletButton')?.addEventListener('click', () => demoMode ? exitDemoWallet() : enterDemoWallet());
+document.getElementById('sidebarOpen').addEventListener('click', () => document.getElementById('dashboardSidebar').classList.add('open'));
+document.getElementById('sidebarClose').addEventListener('click', () => document.getElementById('dashboardSidebar').classList.remove('open'));
 document.getElementById('signOut').addEventListener('click', async () => { if (auth) await signOut(auth); localStorage.removeItem('inbestmen_user'); window.location.href = 'auth.html'; });
+window.addEventListener('hashchange', () => setView(window.location.hash.slice(1), false));
+setDemoNote();
+setView(window.location.hash.slice(1) || 'overview', false);

@@ -64,7 +64,11 @@ const documentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'el
 const stateDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'inbestmenAdminState', documentId);
 const userDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'users', documentId);
 const paypalTransactionUrl = (projectId, documentId = '') => collectionUrl(projectId, 'paypalTransactions', documentId);
+const projectDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'projects', documentId);
+const supportCollectionUrl = (projectId, uid, documentId = '') => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/users/${encodeURIComponent(uid)}/support${documentId ? `/${encodeURIComponent(documentId)}` : ''}`;
+const projectDonationUrl = (projectId, documentId = '') => collectionUrl(projectId, 'projectDonations', documentId);
 const documentResourcePath = (projectId, collection, documentId) => `projects/${projectId}/databases/(default)/documents/${collection}/${documentId}`;
+const supportResourcePath = (projectId, uid, projectKey) => `projects/${projectId}/databases/(default)/documents/users/${uid}/support/${projectKey}`;
 const commitUrl = (projectId) => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents:commit`;
 
 const readFirestoreDocument = async (url, token) => {
@@ -92,6 +96,14 @@ export const listProjectBriefs = async (limit = 50) => {
     const data = await response.json();
     if (!response.ok) throw new Error(`Firestore could not list project briefs (${response.status}).`);
     return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...Object.fromEntries(Object.entries(document.fields || {}).map(([key, value]) => [key, fromFirestoreValue(value)])) }));
+};
+
+export const listProjectDocuments = async (limit = 100) => {
+    const { account, token } = await getAccessToken();
+    const response = await fetch(`${projectDocumentUrl(account.projectId)}?${new URLSearchParams({ pageSize: String(Math.min(100, Math.max(1, limit))) })}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Firestore could not list projects (${response.status}).`);
+    return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...fieldsToObject(document.fields || {}) }));
 };
 
 export const deleteProjectBrief = async (documentId) => {
@@ -178,6 +190,70 @@ export const getUserWallet = async (uid) => {
     const document = await readFirestoreDocument(userDocumentUrl(account.projectId, safeUid), token);
     const fields = fieldsToObject(document?.fields || {});
     return { uid: safeUid, ibBalance: Number(fields.ibBalance || 0), totalPurchasedUsd: Number(fields.totalPurchasedUsd || 0), updatedAt: fields.updatedAt || null };
+};
+
+export const getUserSupport = async (uid) => {
+    const safeUid = String(uid || '').trim();
+    if (!safeUid || safeUid.includes('/') || safeUid.length > 128) throw Object.assign(new Error('A valid Firebase user is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const response = await fetch(`${supportCollectionUrl(account.projectId, safeUid)}?pageSize=100`, { headers: { Authorization: `Bearer ${token}` } });
+    if (response.status === 404) return [];
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Firestore could not list project support (${response.status}).`);
+    return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...fieldsToObject(document.fields || {}) }));
+};
+
+export const creditProjectDonation = async ({ uid, project, amount }) => {
+    const safeUid = String(uid || '').trim();
+    const projectKey = String(project?.id || '').trim();
+    if (!safeUid || safeUid.includes('/') || safeUid.length > 128 || !projectKey || projectKey.includes('/') || projectKey.length > 100) throw Object.assign(new Error('A valid user and project are required.'), { statusCode: 400 });
+    const donationAmount = Number(amount);
+    if (!Number.isInteger(donationAmount) || donationAmount < 1 || donationAmount > 1000000) throw Object.assign(new Error('The iB Coin amount is invalid.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const [walletDocument, projectDocument, supportDocument] = await Promise.all([
+        readFirestoreDocument(userDocumentUrl(account.projectId, safeUid), token),
+        readFirestoreDocument(projectDocumentUrl(account.projectId, projectKey), token),
+        readFirestoreDocument(supportCollectionUrl(account.projectId, safeUid, projectKey), token)
+    ]);
+    const walletFields = fieldsToObject(walletDocument?.fields || {});
+    const storedProjectFields = fieldsToObject(projectDocument?.fields || {});
+    const projectFields = { ...project, ...storedProjectFields };
+    const currentBalance = Number(walletFields.ibBalance || 0);
+    const currentRaised = Number(projectFields.ibRaised || 0);
+    const goal = Number(projectFields.ibGoal || 0);
+    if (currentBalance < donationAmount) throw Object.assign(new Error(`Your wallet has ${currentBalance} iB Coins available. Buy more Coins before donating.`), { statusCode: 409 });
+    if (goal > 0 && currentRaised >= goal) throw Object.assign(new Error('This project has already reached its donation goal.'), { statusCode: 409 });
+    if (goal > 0 && currentRaised + donationAmount > goal) throw Object.assign(new Error(`Only ${goal - currentRaised} iB Coins remain before this project reaches its goal.`), { statusCode: 409 });
+
+    const supportFields = fieldsToObject(supportDocument?.fields || {});
+    const now = new Date().toISOString();
+    const nextBalance = currentBalance - donationAmount;
+    const nextRaised = currentRaised + donationAmount;
+    const nextSupport = Number(supportFields.ibDonated || 0) + donationAmount;
+    const nextWalletFields = { ...walletFields, uid: safeUid, ibBalance: nextBalance, totalDonatedIb: Number(walletFields.totalDonatedIb || 0) + donationAmount, updatedAt: now };
+    const nextProjectFields = { ...projectFields, id: projectKey, ibRaised: nextRaised, updatedAt: now };
+    const donationId = crypto.randomUUID();
+    const writes = [
+        {
+            update: { name: documentResourcePath(account.projectId, 'users', safeUid), fields: Object.fromEntries(Object.entries(nextWalletFields).map(([key, value]) => [key, toFirestoreValue(value)])) },
+            currentDocument: walletDocument?.updateTime ? { updateTime: walletDocument.updateTime } : { exists: false }
+        },
+        {
+            update: { name: documentResourcePath(account.projectId, 'projects', projectKey), fields: Object.fromEntries(Object.entries(nextProjectFields).map(([key, value]) => [key, toFirestoreValue(value)])) },
+            currentDocument: projectDocument?.updateTime ? { updateTime: projectDocument.updateTime } : { exists: false }
+        },
+        {
+            update: { name: supportResourcePath(account.projectId, safeUid, projectKey), fields: { projectId: toFirestoreValue(projectKey), ibDonated: toFirestoreValue(nextSupport), updatedAt: toFirestoreValue(now) } },
+            currentDocument: supportDocument?.updateTime ? { updateTime: supportDocument.updateTime } : { exists: false }
+        },
+        {
+            update: { name: documentResourcePath(account.projectId, 'projectDonations', donationId), fields: { id: toFirestoreValue(donationId), uid: toFirestoreValue(safeUid), projectId: toFirestoreValue(projectKey), amountIb: toFirestoreValue(donationAmount), createdAt: toFirestoreValue(now), status: toFirestoreValue('COMPLETED') } },
+            currentDocument: { exists: false }
+        }
+    ];
+    const commitResponse = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes }) });
+    if (!commitResponse.ok) throw Object.assign(new Error('The donation could not be recorded safely. Please refresh and try again.'), { statusCode: 409 });
+    return { donationId, wallet: { uid: safeUid, ibBalance: nextBalance, totalPurchasedUsd: Number(walletFields.totalPurchasedUsd || 0), updatedAt: now }, project: { ...nextProjectFields, progress: goal > 0 ? Math.min(100, Math.round((nextRaised / goal) * 100)) : 0 }, amount: donationAmount };
 };
 
 export const creditUserWallet = async ({ uid, orderId, captureId, amountUsd, currency, paypalStatus }) => {

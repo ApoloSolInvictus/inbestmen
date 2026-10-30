@@ -27,3 +27,13 @@
 .paypal-button-container[hidden] { display: none; }
 .payment-note.error { color: #a24e46; }
 .payment-note.success { color: #347349; }
+.wallet-card .btn-outline-dark { border-color: rgba(255,255,255,.28); color: var(--white); }
+.wallet-card .btn-outline-dark:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.55); color: var(--white); }
+.demo-mode-note { color: var(--lime) !important; font-family: 'DM Mono', monospace; font-size: 9px !important; line-height: 1.5; margin: 13px 0 0; }
+.project-card-actions { align-items: stretch; flex-direction: column; gap: 14px; }
+.project-card-links { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+.donation-controls { align-items: center; display: flex; gap: 8px; }
+.donation-amount { background: var(--paper); border: 1px solid var(--line); border-radius: 9px; color: var(--ink); font-family: 'DM Mono', monospace; font-size: 10px; min-height: 35px; padding: 0 9px; }
+.donation-controls .btn { flex: 1; min-height: 35px; }
+.donation-controls .btn:disabled { cursor: not-allowed; opacity: .6; }
+@media (max-width: 480px) { .project-card-links { align-items: flex-start; flex-direction: column; gap: 9px; }.donation-controls { width: 100%; }.donation-amount { flex: 1; }.donation-controls .btn { flex: 0 0 auto; }.wallet-actions .btn { width: 100%; } }
