@@ -14,7 +14,20 @@ let walletBalance = 0;
 let demoMode = false;
 let demoSnapshot = null;
 
-const demoUser = JSON.parse(localStorage.getItem('inbestmen_user') || '{"name":"Preview Member","email":"Preview mode"}');
+const readStoredJson = (key, fallback) => {
+    try {
+        const stored = window.localStorage?.getItem(key);
+        return stored ? JSON.parse(stored) : fallback;
+    } catch (_error) {
+        try { window.localStorage?.removeItem(key); } catch (_storageError) { /* Storage can be unavailable in private browsing. */ }
+        return fallback;
+    }
+};
+const writeStoredJson = (key, value) => {
+    try { window.localStorage?.setItem(key, JSON.stringify(value)); } catch (_error) { /* Private browsing may block storage. */ }
+};
+
+const demoUser = readStoredJson('inbestmen_user', { name: 'Preview Member', email: 'Preview mode' });
 const userName = document.getElementById('userName');
 const userEmail = document.getElementById('userEmail');
 const welcomeName = document.getElementById('welcomeName');
@@ -37,7 +50,7 @@ const finished = [
 ];
 
 let projects = initialProjects.map(normalizeProject);
-let supported = JSON.parse(localStorage.getItem('inbestmen_supported_projects') || '[]');
+let supported = readStoredJson('inbestmen_supported_projects', []);
 let modalProjectId = '';
 let lastFocusedElement = null;
 
@@ -198,7 +211,7 @@ const loadSupportedProjects = async () => {
     try {
         const data = await apiFetch('/api/projects/support');
         supported = (Array.isArray(data.support) ? data.support : []).filter((item) => Number(item.ibDonated || 0) > 0).map((item) => String(item.projectId || item.id));
-        localStorage.setItem('inbestmen_supported_projects', JSON.stringify(supported));
+        writeStoredJson('inbestmen_supported_projects', supported);
         renderProjects();
     } catch (error) {
         console.warn(error);
@@ -278,7 +291,7 @@ const updateProjectFromDonation = (projectData) => {
     projects = projects.map((project) => project.id === donatedProject.id ? { ...project, ...donatedProject, ibRaised: donatedProject.ibRaised || project.ibRaised, ibGoal: donatedProject.ibGoal || project.ibGoal } : project);
     if (!projects.some((project) => project.id === donatedProject.id)) projects = [...projects, donatedProject];
     supported = Array.from(new Set([...supported, donatedProject.id]));
-    localStorage.setItem('inbestmen_supported_projects', JSON.stringify(supported));
+    writeStoredJson('inbestmen_supported_projects', supported);
 };
 
 const handleDemoDonation = (projectId, amount) => {
@@ -294,7 +307,7 @@ const handleDemoDonation = (projectId, amount) => {
 };
 
 const handleDonation = async (projectId, button) => {
-    const select = button.dataset.modalDonate ? document.getElementById('modalDonationAmount') : document.querySelector(`[data-donation-amount-for="${CSS.escape(projectId)}"]`);
+    const select = button.dataset.modalDonate ? document.getElementById('modalDonationAmount') : Array.from(document.querySelectorAll('[data-donation-amount-for]')).find((item) => item.dataset.donationAmountFor === projectId);
     const amount = Number(select?.value || 0);
     if (!Number.isInteger(amount) || amount < 1) return;
     button.disabled = true;
@@ -387,10 +400,10 @@ const loadPayPalCheckout = async () => {
 };
 
 const setView = (view, updateHash = true) => {
-    const validView = document.querySelector(`[data-view-panel="${CSS.escape(view)}"]`) ? view : 'overview';
+    const validView = Array.from(document.querySelectorAll('.dashboard-view')).some((panel) => panel.dataset.viewPanel === view) ? view : 'overview';
     document.querySelectorAll('.dashboard-view').forEach((panel) => panel.classList.toggle('active', panel.dataset.viewPanel === validView));
     document.querySelectorAll('.dashboard-nav-link').forEach((link) => link.classList.toggle('active', link.dataset.view === validView));
-    document.getElementById('pageTitle').textContent = document.querySelector(`[data-view="${CSS.escape(validView)}"] span`)?.textContent || 'Home';
+    document.getElementById('pageTitle').textContent = Array.from(document.querySelectorAll('.dashboard-nav-link')).find((link) => link.dataset.view === validView)?.querySelector('span')?.textContent || 'Home';
     if (updateHash) window.history.replaceState(null, '', `#${validView}`);
     document.getElementById('dashboardSidebar').classList.remove('open');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -409,7 +422,7 @@ if (auth) onAuthStateChanged(auth, (user) => {
     }
 });
 
-document.querySelectorAll('.dashboard-nav-link').forEach((link) => link.addEventListener('click', () => setView(link.dataset.view)));
+document.querySelectorAll('.dashboard-nav-link').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); setView(link.dataset.view); }));
 document.querySelectorAll('[data-open-view]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); setView(button.dataset.openView); }));
 document.querySelectorAll('[data-amount]').forEach((button) => button.addEventListener('click', () => {
     selectedAmount = Number(button.dataset.amount);

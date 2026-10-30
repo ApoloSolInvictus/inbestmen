@@ -6,7 +6,7 @@ The first Dashboard pass is ready in `auth.html` and `dashboard.html`.
 
 1. Create or open the inBestmen project in Firebase Console.
 2. Add a Web App and copy its configuration into `js/firebase-config.js`.
-3. Add your production Vercel domain and local development domain under Authentication > Settings > Authorized domains.
+3. Add `www.inbestmen.app`, `inbestmen.app` and your local development domain under Authentication > Settings > Authorized domains.
 
 ## 2. Enable sign-in methods
 
@@ -110,7 +110,7 @@ The current site uses `ELEVENLABS_API_KEY` and `ELEVENLABS_AGENT_ID` for server-
 
 The public homepage includes the official ElevenLabs Conversational AI widget using the `inBestmen Project Intake Agent` ID. The widget is a secondary web conversation; the official project submission route remains Telegram.
 
-The widget supports private agents by requesting a short-lived signed URL from `/api/elevenlabs/signed-url`; the API key stays on Vercel. If you prefer to use the agent ID directly, ElevenLabs requires the widget agent to be public with authentication disabled. An allowlist can still restrict the public widget to `inbestmen.wstudio3d.com`. The widget follows ElevenLabs' official embed pattern and is loaded from the official embed package.
+The widget supports private agents by requesting a short-lived signed URL from `/api/elevenlabs/signed-url`; the API key stays on Vercel. If you prefer to use the agent ID directly, ElevenLabs requires the widget agent to be public with authentication disabled. Update the ElevenLabs widget/domain allowlist to `https://www.inbestmen.app` and keep the widget agent ID in sync with `ELEVENLABS_AGENT_ID`. The widget follows ElevenLabs' official embed pattern and is loaded from the official embed package.
 
 ## 9. Live admin connection
 
@@ -141,7 +141,7 @@ impact, timeline, risks, next_stage
 Configure an ElevenLabs post-call transcription webhook at:
 
 ```text
-https://inbestmen.wstudio3d.com/api/elevenlabs/webhook
+https://www.inbestmen.app/api/elevenlabs/webhook
 ```
 
 Use HMAC authentication, copy the generated signing secret to `ELEVENLABS_WEBHOOK_SECRET` in Vercel and enable the transcription event. The endpoint validates the `ElevenLabs-Signature`, normalizes the collected fields into `inbestmen.project-brief.v1`, and writes one idempotent document per conversation to Firestore.
