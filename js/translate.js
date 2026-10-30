@@ -127,6 +127,15 @@
         document.head.append(script);
     }
 
+    function hideGoogleChrome() {
+        document.querySelectorAll('iframe.goog-te-banner-frame, .goog-te-banner-frame, body > .skiptranslate, #goog-gt-tt, .goog-tooltip, .goog-text-highlight').forEach((element) => {
+            element.style.setProperty('display', 'none', 'important');
+            element.style.setProperty('visibility', 'hidden', 'important');
+        });
+        document.documentElement.style.setProperty('top', '0px', 'important');
+        document.body?.style.setProperty('top', '0px', 'important');
+    }
+
     function loadStyles() {
         if (document.querySelector('link[href$="css/translate.css"]')) return;
         const link = document.createElement('link');
@@ -177,6 +186,8 @@
 
     function init() {
         loadStyles();
+        hideGoogleChrome();
+        new MutationObserver(hideGoogleChrome).observe(document.body, { childList: true, subtree: true });
         if (!document.getElementById('google_translate_element')) {
             const googleHost = document.createElement('div');
             googleHost.id = 'google_translate_element';
@@ -213,6 +224,8 @@
         });
         document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMenus(); });
         loadGoogleTranslate();
+        window.setTimeout(hideGoogleChrome, 250);
+        window.setTimeout(hideGoogleChrome, 1000);
         if (googleReady) applyPendingLanguage();
     }
 

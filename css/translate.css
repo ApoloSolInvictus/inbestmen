@@ -1,7 +1,7 @@
 /* Global language control. Google Translate stays visually hidden; the Saturn control is the only visible entry point. */
 #google_translate_element { height: 1px; left: -9999px; overflow: hidden; position: fixed; top: -9999px; width: 1px; }
-.goog-te-banner-frame.skiptranslate, .goog-te-banner-frame { display: none !important; }
-body { top: 0 !important; }
+.goog-te-banner-frame.skiptranslate, iframe.goog-te-banner-frame, .goog-te-banner-frame, body > .skiptranslate { display: none !important; visibility: hidden !important; }
+html, body { top: 0 !important; }
 .goog-te-gadget, .goog-te-gadget-simple { height: 1px !important; overflow: hidden !important; width: 1px !important; }
 .goog-tooltip, .goog-tooltip:hover, .goog-text-highlight { background: transparent !important; box-shadow: none !important; }
 
