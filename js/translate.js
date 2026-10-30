@@ -29,6 +29,7 @@
     const languageCodes = languages.map((language) => language[1]).join(',');
     let googleReady = false;
     let pendingLanguage = null;
+    let googleSelectRetryTimer = null;
 
     const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const getSavedLanguage = () => window.localStorage.getItem('inbestmen_language') || 'en';
@@ -87,13 +88,38 @@
         return document.querySelector('.goog-te-combo');
     }
 
+    function waitForGoogleSelect() {
+        if (googleSelectRetryTimer) return;
+        let attempts = 0;
+        const check = () => {
+            const select = getGoogleSelect();
+            if (select && select.options.length > 1) {
+                googleSelectRetryTimer = null;
+                setGoogleLanguage(pendingLanguage || getSavedLanguage());
+                return;
+            }
+            if (attempts++ >= 40) {
+                googleSelectRetryTimer = null;
+                return;
+            }
+            googleSelectRetryTimer = window.setTimeout(() => {
+                googleSelectRetryTimer = null;
+                check();
+            }, 250);
+        };
+        check();
+    }
+
     function setGoogleLanguage(code) {
         pendingLanguage = code;
         const select = getGoogleSelect();
-        if (!select) return;
+        if (!select || select.options.length < 2) {
+            waitForGoogleSelect();
+            return;
+        }
         pendingLanguage = null;
         select.value = code === 'en' ? '' : code;
-        select.dispatchEvent(new Event('change'));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
         window.localStorage.setItem('inbestmen_language', code);
         document.querySelectorAll('[data-translate-switcher]').forEach((switcher) => {
             const list = switcher.querySelector('.translate-language-list');
@@ -115,7 +141,10 @@
             multilanguagePage: true
         }, 'google_translate_element');
         googleReady = true;
-        window.setTimeout(applyPendingLanguage, 500);
+        window.setTimeout(() => {
+            applyPendingLanguage();
+            waitForGoogleSelect();
+        }, 100);
     };
 
     function loadGoogleTranslate() {
