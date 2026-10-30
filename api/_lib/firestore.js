@@ -65,6 +65,7 @@ const stateDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId
 const userDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'users', documentId);
 const paypalTransactionUrl = (projectId, documentId = '') => collectionUrl(projectId, 'paypalTransactions', documentId);
 const projectDocumentUrl = (projectId, documentId = '') => collectionUrl(projectId, 'projects', documentId);
+const projectPayoutUrl = (projectId, documentId = '') => collectionUrl(projectId, 'projectPayouts', documentId);
 const supportCollectionUrl = (projectId, uid, documentId = '') => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/users/${encodeURIComponent(uid)}/support${documentId ? `/${encodeURIComponent(documentId)}` : ''}`;
 const projectDonationUrl = (projectId, documentId = '') => collectionUrl(projectId, 'projectDonations', documentId);
 const documentResourcePath = (projectId, collection, documentId) => `projects/${projectId}/databases/(default)/documents/${collection}/${documentId}`;
@@ -104,6 +105,97 @@ export const listProjectDocuments = async (limit = 100) => {
     const data = await response.json();
     if (!response.ok) throw new Error(`Firestore could not list projects (${response.status}).`);
     return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...fieldsToObject(document.fields || {}) }));
+};
+
+const listCollectionDocuments = async (collection, limit = 100) => {
+    const { account, token } = await getAccessToken();
+    const response = await fetch(`${collectionUrl(account.projectId, collection)}?${new URLSearchParams({ pageSize: String(Math.min(1000, Math.max(1, limit))) })}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Firestore could not list ${collection} (${response.status}).`);
+    return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...fieldsToObject(document.fields || {}) }));
+};
+
+export const listProjectDonationDocuments = async (limit = 1000) => listCollectionDocuments('projectDonations', limit);
+export const listProjectPayoutDocuments = async (limit = 1000) => listCollectionDocuments('projectPayouts', limit);
+
+export const updateProjectPaymentAccount = async ({ projectId, paypalRecipientEmail, paypalAccountConfirmed, payoutsEnabled, updatedBy }) => {
+    const safeId = String(projectId || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 100) throw Object.assign(new Error('A valid project id is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const document = await readFirestoreDocument(projectDocumentUrl(account.projectId, safeId), token);
+    if (!document) throw Object.assign(new Error('That project could not be found.'), { statusCode: 404 });
+    const existing = fieldsToObject(document.fields || {});
+    if (existing.approved !== true || !existing.approvedBriefId) throw Object.assign(new Error('Only an approved and published project can receive payouts.'), { statusCode: 409 });
+    const now = new Date().toISOString();
+    const next = { ...existing, paypalRecipientEmail, paypalAccountConfirmed: Boolean(paypalAccountConfirmed), payoutsEnabled: Boolean(payoutsEnabled), paypalAccountUpdatedAt: now, paypalAccountUpdatedBy: String(updatedBy || '') };
+    const response = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes: [{ update: { name: documentResourcePath(account.projectId, 'projects', safeId), fields: Object.fromEntries(Object.entries(next).map(([key, value]) => [key, toFirestoreValue(value)])) }, currentDocument: document.updateTime ? { updateTime: document.updateTime } : { exists: false } }] }) });
+    if (!response.ok) throw Object.assign(new Error('The project PayPal account could not be saved safely.'), { statusCode: 409 });
+    return next;
+};
+
+export const getProjectPayoutDocument = async (payoutId) => {
+    const safeId = String(payoutId || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 150) return null;
+    const { account, token } = await getAccessToken();
+    const document = await readFirestoreDocument(projectPayoutUrl(account.projectId, safeId), token);
+    return document ? { id: safeId, ...fieldsToObject(document.fields || {}), _updateTime: document.updateTime || null } : null;
+};
+
+export const findProjectPayoutDocument = async (providerId) => {
+    const safeId = String(providerId || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 256) return null;
+    const direct = await getProjectPayoutDocument(safeId);
+    if (direct) return direct;
+    const payouts = await listProjectPayoutDocuments(1000);
+    const match = payouts.find((payout) => [payout.senderItemId, payout.paypalItemId, payout.senderBatchId, payout.paypalBatchId].some((value) => String(value || '') === safeId));
+    return match || null;
+};
+
+export const createProjectPayoutDocument = async (payout) => {
+    const safeId = String(payout?.id || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 150) throw Object.assign(new Error('A valid payout id is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const existing = await readFirestoreDocument(projectPayoutUrl(account.projectId, safeId), token);
+    if (existing) throw Object.assign(new Error('This weekly payout is already registered.'), { statusCode: 409 });
+    const fields = { ...payout, id: safeId };
+    const response = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes: [{ update: { name: documentResourcePath(account.projectId, 'projectPayouts', safeId), fields: Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, toFirestoreValue(value)])) }, currentDocument: { exists: false } }] }) });
+    if (!response.ok) throw Object.assign(new Error('The weekly payout could not be reserved safely.'), { statusCode: 409 });
+    return fields;
+};
+
+export const updateProjectPayoutDocument = async (payoutId, changes) => {
+    const safeId = String(payoutId || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 150) throw Object.assign(new Error('A valid payout id is required.'), { statusCode: 400 });
+    const { account, token } = await getAccessToken();
+    const document = await readFirestoreDocument(projectPayoutUrl(account.projectId, safeId), token);
+    if (!document) throw Object.assign(new Error('That payout record could not be found.'), { statusCode: 404 });
+    const existing = fieldsToObject(document.fields || {});
+    const next = { ...existing, ...changes, id: safeId, updatedAt: new Date().toISOString() };
+    const response = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes: [{ update: { name: documentResourcePath(account.projectId, 'projectPayouts', safeId), fields: Object.fromEntries(Object.entries(next).map(([key, value]) => [key, toFirestoreValue(value)])) }, currentDocument: document.updateTime ? { updateTime: document.updateTime } : { exists: false } }] }) });
+    if (!response.ok) throw Object.assign(new Error('The payout record could not be updated safely.'), { statusCode: 409 });
+    return next;
+};
+
+export const markProjectPayoutStatus = async ({ payoutId, status, paypalBatchId = '', paypalItemId = '', failureReason = '' }) => {
+    const payout = await findProjectPayoutDocument(payoutId);
+    if (!payout) return null;
+    const nextStatus = String(status || '').toUpperCase();
+    const isPaid = ['SUCCEEDED', 'COMPLETED'].includes(nextStatus);
+    const next = await updateProjectPayoutDocument(payout.id, { status: nextStatus, paypalBatchId: paypalBatchId || payout.paypalBatchId || '', paypalItemId: paypalItemId || payout.paypalItemId || '', failureReason: failureReason || '', completedAt: isPaid ? (payout.completedAt || new Date().toISOString()) : (payout.completedAt || '') });
+    if (isPaid) {
+        const { account, token } = await getAccessToken();
+        const projectDocument = await readFirestoreDocument(projectDocumentUrl(account.projectId, String(payout.projectId)), token);
+        if (projectDocument) {
+            const project = fieldsToObject(projectDocument.fields || {});
+            const paidPayoutIds = Array.isArray(project.paidPayoutIds) ? project.paidPayoutIds.map((id) => String(id)) : [];
+            if (!paidPayoutIds.includes(payout.id)) {
+                const nextProject = { ...project, paidPayoutIds: [...paidPayoutIds, payout.id], totalPaidIb: Number(project.totalPaidIb || 0) + Number(payout.amountIb || 0), totalPaidUsd: Number(project.totalPaidUsd || 0) + Number(payout.amountUsd || payout.amountIb || 0), lastPayoutAt: next.completedAt, updatedAt: new Date().toISOString() };
+                const response = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes: [{ update: { name: documentResourcePath(account.projectId, 'projects', String(payout.projectId)), fields: Object.fromEntries(Object.entries(nextProject).map(([key, value]) => [key, toFirestoreValue(value)])) }, currentDocument: projectDocument.updateTime ? { updateTime: projectDocument.updateTime } : { exists: false } }] }) });
+                if (!response.ok) throw new Error('The project payout was completed but its project total could not be reconciled.');
+            }
+        }
+    }
+    return next;
 };
 
 const makePublishedProjectId = (brief) => {

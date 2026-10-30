@@ -31,6 +31,14 @@ export default async function handler(request, response) {
             const result = await verifyPayPalConnection();
             return { message: `PayPal ${result.environment} credentials verified (${result.currency}).`, environment: result.environment, currency: result.currency };
         }),
+        check('paypalWebhook', async () => {
+            if (!process.env.PAYPAL_WEBHOOK_ID) throw new Error('PAYPAL_WEBHOOK_ID is not configured.');
+            return { message: 'PayPal payout webhook verification is configured.' };
+        }),
+        check('weeklyScheduler', async () => {
+            if (!process.env.CRON_SECRET) throw new Error('CRON_SECRET is not configured.');
+            return { message: 'Monday payout scheduler is protected and configured.' };
+        }),
         check('openai', async () => {
             if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not configured.');
             return { message: 'OpenAI screening credentials are configured.' };

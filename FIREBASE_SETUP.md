@@ -78,6 +78,8 @@ PAYPAL_CLIENT_ID=your-paypal-app-client-id
 PAYPAL_CLIENT_SECRET=your-paypal-app-secret
 PAYPAL_ENVIRONMENT=sandbox
 PAYPAL_CURRENCY=USD
+PAYPAL_WEBHOOK_ID=your-paypal-webhook-id
+CRON_SECRET=long-random-vercel-cron-secret
 ```
 
 Use `sandbox` while testing with PayPal sandbox buyer accounts. Use `live` only after the merchant account and application are approved for real payments. Never put `PAYPAL_CLIENT_SECRET` in HTML, JavaScript or GitHub. The PayPal account used to create the app is the merchant account that receives the payment; a separate business email variable is not required by this checkout flow. Firebase server variables must also be configured: `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_JSON` and a real Firebase Web App config in `js/firebase-config.js`.
@@ -94,7 +96,25 @@ Every active project card in **inBest Projects** now includes:
 
 The catalog endpoint is `/api/projects/list` and the signed-in user's support history is `/api/projects/support`. Both routes require a Firebase ID token. The donation endpoint rejects insufficient balances, invalid amounts and contributions that would exceed the approved project goal. The server uses a Firestore optimistic commit so the wallet and project total move together.
 
-For a safe visual walkthrough, the wallet has **Try sample wallet**. It loads 21 example iB Coins entirely in the browser so a test donation can visibly reduce the balance and increase a project total. The UI labels this mode clearly and never calls PayPal or Firestore while it is active. Exit sample wallet before testing a real authenticated wallet.
+The user Dashboard has no demo wallet or fake project balance. Test the flow with a sandbox buyer account before switching the Vercel environment to `live`.
+
+## 6.1. Weekly project payouts
+
+The Admin **Payment ledger** calculates each closed week from the completed records in `projectDonations`. The platform uses Monday 00:00 UTC as the payout boundary: donations from the previous Monday through Sunday become eligible for the Monday payout run. Amounts are capped by the approved `ibGoal` and are separated into `due`, `processing` and `paid` so an in-flight PayPal payout is not submitted twice.
+
+After the project representative confirms their destination, an approved administrator must enter the PayPal email, check **Confirmed**, and explicitly enable **Monday payouts**. The account is stored on the published project document as `paypalRecipientEmail`; private founder contact data is not shown to public users.
+
+The Vercel Pro cron invokes `/api/cron/weekly-payouts` every Monday at 14:00 UTC. It requires `CRON_SECRET` and only submits projects with a confirmed PayPal email, payouts enabled and a positive closed-week balance. The Admin can also submit an individual weekly payout from the ledger after confirming the recipient and amount.
+
+PayPal Payouts must be enabled for the live REST app. Configure the webhook URL below in the same PayPal app and store its webhook ID as `PAYPAL_WEBHOOK_ID`:
+
+```text
+https://www.inbestmen.app/api/paypal/webhook
+```
+
+Subscribe to `PAYMENT.PAYOUTS-ITEM.SUCCEEDED`, `PAYMENT.PAYOUTS-ITEM.FAILED`, `PAYMENT.PAYOUTS-ITEM.CANCELED`, `PAYMENT.PAYOUTS-ITEM.RETURNED`, `PAYMENT.PAYOUTSBATCH.SUCCESS`, `PAYMENT.PAYOUTSBATCH.PROCESSING` and `PAYMENT.PAYOUTSBATCH.DENIED`. The webhook verifies the event with PayPal before marking the project payout as completed or failed. PayPal's Payouts API uses the recipient email and a unique sender batch ID; the same batch ID is deliberately reused for safe retries.
+
+Payouts can have tax, consumer-protection, money-transmission and crowdfunding implications depending on the countries involved. Have qualified legal and accounting professionals review the operating model before enabling automatic live payouts.
 
 ## 7. Telegram project intake
 

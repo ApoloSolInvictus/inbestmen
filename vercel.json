@@ -4,6 +4,9 @@
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/invest-in-inbest", "destination": "/invest-in-inbest.html" }
   ],
+  "crons": [
+    { "path": "/api/cron/weekly-payouts", "schedule": "0 14 * * 1" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

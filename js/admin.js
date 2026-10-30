@@ -53,6 +53,8 @@ const healthFields = {
     elevenlabs: { label: 'ElevenLabs', statusId: 'healthElevenLabs', barId: 'healthElevenLabsBar' },
     elevenlabsWebhook: { label: 'ElevenLabs webhook', statusId: 'healthWebhook', barId: 'healthWebhookBar' },
     paypal: { label: 'PayPal', statusId: 'healthPayPal', barId: 'healthPayPalBar' },
+    paypalWebhook: { label: 'PayPal payout webhook', statusId: 'healthPayPalWebhook', barId: 'healthPayPalWebhookBar' },
+    weeklyScheduler: { label: 'Monday payout scheduler', statusId: 'healthScheduler', barId: 'healthSchedulerBar' },
     openai: { label: 'OpenAI', statusId: 'healthOpenAI', barId: 'healthOpenAIBar' },
     projectPublishing: { label: 'Project publishing', statusId: 'healthPublishing', barId: 'healthPublishingBar' }
 };
@@ -93,6 +95,81 @@ const loadSystemHealth = async () => {
         document.getElementById('healthLastChecked').textContent = error.message || 'System health could not be loaded.';
     } finally {
         if (button) { button.disabled = false; button.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Check now'; }
+    }
+};
+
+let paymentLedger = null;
+const formatIbUsd = (value) => `$${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+
+const renderPaymentLedger = (data) => {
+    paymentLedger = data;
+    const summary = data.summary || {};
+    const projects = data.projects || [];
+    const week = data.week || {};
+    document.getElementById('ledgerGross').textContent = formatIbUsd(summary.grossContributionsIb);
+    document.getElementById('ledgerGrossNote').textContent = `${Number(summary.grossContributionsIb || 0).toLocaleString('en-US')} iB recorded`;
+    document.getElementById('ledgerPending').textContent = formatIbUsd(summary.pendingPayoutsIb);
+    document.getElementById('ledgerPendingNote').textContent = summary.pendingPayoutsIb ? 'Submitted or processing' : 'Nothing in transit';
+    document.getElementById('ledgerDue').textContent = formatIbUsd(summary.payoutsDueIb);
+    document.getElementById('ledgerDueNote').textContent = week.label ? `Closed week ${week.label}` : 'Closed week';
+    document.getElementById('ledgerPaid').textContent = formatIbUsd(summary.paidOutIb);
+    document.getElementById('ledgerPaidNote').textContent = `${summary.projectsWithAccounts || 0} project account${summary.projectsWithAccounts === 1 ? '' : 's'} configured`;
+    document.getElementById('paymentsDueMetric').textContent = formatIbUsd(summary.payoutsDueIb);
+    document.getElementById('paymentsDueMetricNote').innerHTML = `<i class="bi bi-wallet2"></i> ${summary.pendingPayoutsIb ? 'Payouts in transit' : 'Closed-week obligations'}`;
+    document.getElementById('paymentLedgerState').innerHTML = `<i class="bi bi-check-circle"></i> ${projects.length} approved project${projects.length === 1 ? '' : 's'}`;
+    document.getElementById('paymentLedgerStateMessage').textContent = week.label ? `Closed period: ${week.label}. Weekly amounts are capped by each approved project goal.` : 'Payment ledger loaded.';
+    const body = document.getElementById('paymentLedgerBody');
+    if (!projects.length) {
+        body.innerHTML = '<tr><td colspan="5"><div class="live-empty-state large"><i class="bi bi-wallet2"></i><strong>No approved projects yet.</strong><span>Publish an approved project packet before assigning a payout account.</span></div></td></tr>';
+        return;
+    }
+    body.innerHTML = projects.map((project) => {
+        const goal = Number(project.ibGoal || 0);
+        const progress = goal ? Math.min(100, Math.round((Number(project.totalDonatedIb || 0) / goal) * 100)) : 0;
+        const status = String(project.payoutStatus || 'NOT_STARTED').toUpperCase();
+        const accountNote = project.paypalAccountConfirmed ? 'Email confirmed' : 'Awaiting account confirmation';
+        const sendLabel = project.weeklyDueIb ? `Send ${formatIbUsd(project.weeklyDueIb)}` : project.pendingPayoutIb ? 'In transit' : 'No payout due';
+        return `<tr data-payment-project="${escapeHtml(project.id)}"><td><div class="table-project"><span class="table-project-mark cyan"><i class="bi bi-folder2-open"></i></span><div><strong>${escapeHtml(project.name || 'Unnamed project')}</strong><small>${escapeHtml(project.location || 'Location not captured')}</small><small>${formatIbUsd(project.totalDonatedIb)} raised · ${progress}% of ${formatIbUsd(goal)} goal</small></div></div></td><td><div class="payment-account-form"><input data-paypal-email type="email" value="${escapeHtml(project.paypalRecipientEmail || '')}" placeholder="project@paypal.com" aria-label="PayPal email for ${escapeHtml(project.name || 'project')}"><label><input data-paypal-confirm type="checkbox"${project.paypalAccountConfirmed ? ' checked' : ''}> Confirmed</label><label><input data-payouts-enabled type="checkbox"${project.payoutsEnabled ? ' checked' : ''}> Monday payouts enabled</label><button class="table-action approve" data-save-paypal type="button">Save account</button><small>${escapeHtml(accountNote)}</small></div></td><td><strong>${formatIbUsd(project.weeklyDueIb)}</strong><small>${Number(project.weeklyDonationsIb || 0).toLocaleString('en-US')} iB received · ${escapeHtml(week.label || 'closed week')}</small></td><td><strong>${formatIbUsd(project.totalPaidIb)} paid</strong><small>${formatIbUsd(project.goalRemainingIb)} available under goal · ${escapeHtml(status)}</small></td><td><div class="table-actions"><button class="table-action approve" data-send-payout type="button"${project.payoutReady ? '' : ' disabled'}>${sendLabel}</button>${project.pendingPayoutIb ? `<span class="table-muted">${formatIbUsd(project.pendingPayoutIb)} in transit</span>` : ''}</div></td></tr>`;
+    }).join('');
+};
+
+const loadPaymentLedger = async () => {
+    try {
+        renderPaymentLedger(await apiFetch('/api/admin/payment-ledger'));
+    } catch (error) {
+        document.getElementById('paymentLedgerState').innerHTML = '<i class="bi bi-exclamation-triangle"></i> Ledger unavailable';
+        document.getElementById('paymentLedgerStateMessage').textContent = error.message || 'The payment ledger could not be loaded.';
+        document.getElementById('paymentLedgerStateMessage').style.color = '#a24e46';
+    }
+};
+
+const saveProjectPayPalAccount = async (button) => {
+    const row = button.closest('[data-payment-project]');
+    const email = row.querySelector('[data-paypal-email]').value.trim();
+    const confirmed = row.querySelector('[data-paypal-confirm]').checked;
+    const enabled = row.querySelector('[data-payouts-enabled]').checked;
+    button.disabled = true;
+    try {
+        await apiFetch('/api/admin/project-paypal', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: row.dataset.paymentProject, paypalRecipientEmail: email, paypalAccountConfirmed: confirmed, payoutsEnabled: enabled }) });
+        showToast('Project PayPal account saved.');
+        await loadPaymentLedger();
+    } catch (error) {
+        showToast(error.message || 'The project PayPal account could not be saved.');
+    } finally { button.disabled = false; }
+};
+
+const sendProjectPayout = async (button) => {
+    const row = button.closest('[data-payment-project]');
+    const project = paymentLedger?.projects?.find((item) => item.id === row.dataset.paymentProject);
+    if (!project || !window.confirm(`Send ${formatIbUsd(project.weeklyDueIb)} to ${project.paypalRecipientEmail} for ${project.name}? PayPal payouts may not be reversible.`)) return;
+    button.disabled = true;
+    try {
+        await apiFetch('/api/admin/payment-ledger/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: project.id }) });
+        showToast('Weekly PayPal payout submitted. The webhook will reconcile the final status.');
+        await loadPaymentLedger();
+    } catch (error) {
+        showToast(error.message || 'The PayPal payout could not be submitted.');
+        button.disabled = false;
     }
 };
 
@@ -343,11 +420,12 @@ const loadConversations = async (append = false) => {
 const loadLiveOperations = async () => {
     if (!currentUser) return;
     setLiveMessage('Checking ElevenLabs, conversation history and project brief storage…');
-    const [agentResult, conversationResult, briefResult, healthResult] = await Promise.allSettled([
+    const [agentResult, conversationResult, briefResult, healthResult, paymentResult] = await Promise.allSettled([
         apiFetch('/api/elevenlabs/status'),
         loadConversations(false),
         apiFetch('/api/projects/briefs?limit=10'),
-        loadSystemHealth()
+        loadSystemHealth(),
+        loadPaymentLedger()
     ]);
     if (agentResult.status === 'fulfilled') renderAgentStatus(agentResult.value);
     else setLiveMessage(agentResult.reason.message, true);
@@ -434,6 +512,7 @@ previewButton.addEventListener('click', () => openConsole({ displayName: 'Manage
 document.getElementById('adminSignOut').addEventListener('click', async () => { if (liveRefreshTimer) window.clearInterval(liveRefreshTimer); if (auth) await signOut(auth); currentUser = null; app.hidden = true; gate.hidden = false; showStatus('You have been signed out of the management console.'); });
 document.getElementById('refreshLiveData').addEventListener('click', loadLiveOperations);
 document.getElementById('refreshSystemHealth').addEventListener('click', loadSystemHealth);
+document.getElementById('refreshPaymentLedger').addEventListener('click', loadPaymentLedger);
 document.getElementById('syncRecentCalls').addEventListener('click', syncRecentCalls);
 document.getElementById('clearStoredBriefs').addEventListener('click', clearStoredBriefs);
 document.getElementById('loadMoreConversations').addEventListener('click', () => loadConversations(true));
@@ -459,6 +538,20 @@ document.getElementById('adminSidebarOpen').addEventListener('click', () => docu
 document.getElementById('adminSidebarClose').addEventListener('click', () => document.getElementById('adminSidebar').classList.remove('open'));
 
 document.addEventListener('click', (event) => {
+    const savePayPalButton = event.target.closest('[data-save-paypal]');
+    if (savePayPalButton) {
+        event.preventDefault();
+        saveProjectPayPalAccount(savePayPalButton);
+        return;
+    }
+
+    const sendPayoutButton = event.target.closest('[data-send-payout]');
+    if (sendPayoutButton) {
+        event.preventDefault();
+        sendProjectPayout(sendPayoutButton);
+        return;
+    }
+
     const liveConversationButton = event.target.closest('[data-live-conversation]');
     if (liveConversationButton) openConversation(liveConversationButton.dataset.liveConversation);
 

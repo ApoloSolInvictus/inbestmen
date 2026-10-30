@@ -54,3 +54,32 @@ export const createPayPalOrder = async ({ amount, uid, currency }) => payPalRequ
 export const getPayPalOrder = async (orderId) => payPalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}`);
 
 export const capturePayPalOrder = async (orderId) => payPalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'PayPal-Request-Id': `inbestmen-capture-${orderId}` }, body: '{}' });
+
+export const createPayPalPayout = async ({ senderBatchId, senderItemId, receiver, amount, currency = 'USD', note }) => payPalRequest('/v1/payments/payouts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'PayPal-Request-Id': senderBatchId },
+    body: JSON.stringify({
+        sender_batch_header: { sender_batch_id: senderBatchId, recipient_type: 'EMAIL', email_subject: 'Your inBestmen project support is on the way', email_message: note || 'inBestmen weekly project support payout.' },
+        items: [{ recipient_type: 'EMAIL', receiver, sender_item_id: senderItemId, amount: { value: Number(amount).toFixed(2), currency }, note: note || 'Weekly inBestmen project support payout.' }]
+    })
+});
+
+export const getPayPalPayoutBatch = async (batchId) => payPalRequest(`/v1/payments/payouts/${encodeURIComponent(batchId)}`);
+
+export const verifyPayPalWebhookSignature = async ({ headers, webhookEvent }) => {
+    const webhookId = String(process.env.PAYPAL_WEBHOOK_ID || '').trim();
+    if (!webhookId) throw Object.assign(new Error('PAYPAL_WEBHOOK_ID is not configured.'), { statusCode: 503 });
+    const header = (name) => headers?.get?.(name) || headers?.[name] || headers?.[name.toLowerCase()] || '';
+    const payload = {
+        auth_algo: header('paypal-auth-algo'),
+        cert_url: header('paypal-cert-url'),
+        transmission_id: header('paypal-transmission-id'),
+        transmission_sig: header('paypal-transmission-sig'),
+        transmission_time: header('paypal-transmission-time'),
+        webhook_id: webhookId,
+        webhook_event: webhookEvent
+    };
+    if (Object.values(payload).some((value) => !value)) return false;
+    const data = await payPalRequest('/v1/notifications/verify-webhook-signature', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    return data.verification_status === 'SUCCESS';
+};
