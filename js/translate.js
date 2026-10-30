@@ -102,7 +102,8 @@
     function setGoogleLanguageCookie(code) {
         const hostname = window.location.hostname;
         const cookieAttributes = 'path=/;SameSite=Lax';
-        const domains = hostname && hostname.includes('.') ? ['', `;domain=.${hostname}`] : [''];
+        const parentDomain = hostname.split('.').length > 2 ? `;domain=.${hostname.split('.').slice(-2).join('.')}` : '';
+        const domains = hostname && hostname.includes('.') ? ['', `;domain=.${hostname}`, parentDomain] : [''];
         const value = code === 'en' ? '' : `/en/${code}`;
 
         domains.forEach((domain) => {
@@ -110,6 +111,19 @@
                 ? `googtrans=${encodeURIComponent(value)};${cookieAttributes}${domain}`
                 : `googtrans=;expires=Thu, 01 Jan 1970 00:00:00 GMT;${cookieAttributes}${domain}`;
         });
+    }
+
+    function primeLanguageFromUrl() {
+        const language = getPathLanguage();
+        if (!language) return;
+        window.localStorage.setItem('inbestmen_language', language);
+        setGoogleLanguageCookie(language);
+        document.documentElement.lang = language;
+    }
+
+    function fireGoogleChange(select) {
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        window.setTimeout(() => select.dispatchEvent(new Event('change', { bubbles: true })), 80);
     }
 
     function scheduleTranslationRefresh(code, shouldRefresh, reload, hadCorrectCookie) {
@@ -188,7 +202,7 @@
 
         pendingLanguage = null;
         select.value = targetValue;
-        select.dispatchEvent(new Event('change', { bubbles: true }));
+        fireGoogleChange(select);
         refreshLanguageOptions();
         scheduleTranslationRefresh(code, shouldRefresh, reload, hadCorrectCookie);
     }
@@ -320,6 +334,7 @@
     }
 
     function init() {
+        primeLanguageFromUrl();
         loadStyles();
         hideGoogleChrome();
         new MutationObserver(hideGoogleChrome).observe(document.body, { childList: true, subtree: true });
