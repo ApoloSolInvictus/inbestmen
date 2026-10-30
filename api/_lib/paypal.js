@@ -25,6 +25,11 @@ export const getPayPalPublicConfig = () => {
     return { clientId: config.clientId, environment: config.environment, currency: config.currency };
 };
 
+export const verifyPayPalConnection = async () => {
+    const { config, token } = await getAccessToken();
+    return { environment: config.environment, currency: config.currency, authenticated: Boolean(token) };
+};
+
 export const payPalRequest = async (path, options = {}) => {
     const { config, token } = await getAccessToken();
     const response = await fetch(`${config.baseUrl}${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...(options.headers || {}) } });

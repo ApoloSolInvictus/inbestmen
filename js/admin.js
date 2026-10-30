@@ -48,6 +48,54 @@ const apiFetch = async (path, options = {}) => {
     return body;
 };
 
+const healthFields = {
+    firebaseAuth: { label: 'Firebase auth', statusId: 'healthFirebase', barId: 'healthFirebaseBar' },
+    elevenlabs: { label: 'ElevenLabs', statusId: 'healthElevenLabs', barId: 'healthElevenLabsBar' },
+    elevenlabsWebhook: { label: 'ElevenLabs webhook', statusId: 'healthWebhook', barId: 'healthWebhookBar' },
+    paypal: { label: 'PayPal', statusId: 'healthPayPal', barId: 'healthPayPalBar' },
+    openai: { label: 'OpenAI', statusId: 'healthOpenAI', barId: 'healthOpenAIBar' },
+    projectPublishing: { label: 'Project publishing', statusId: 'healthPublishing', barId: 'healthPublishingBar' }
+};
+
+const renderSystemHealth = (data) => {
+    const checks = data.checks || {};
+    Object.entries(healthFields).forEach(([key, field]) => {
+        const check = checks[key] || { status: 'error', message: 'No result returned.' };
+        const card = document.querySelector(`[data-health-check="${key}"]`);
+        const statusElement = document.getElementById(field.statusId);
+        const bar = document.getElementById(field.barId);
+        const operational = check.status === 'operational';
+        if (card) card.classList.toggle('health-error', !operational);
+        if (statusElement) {
+            statusElement.textContent = operational ? 'Operational' : 'Needs attention';
+            statusElement.title = check.message || field.label;
+        }
+        if (bar) bar.style.width = operational ? '100%' : '12%';
+    });
+    const score = document.getElementById('healthScore');
+    const healthy = Object.values(checks).filter((check) => check.status === 'operational').length;
+    const total = Object.keys(healthFields).length;
+    const allHealthy = data.ok && healthy === total;
+    score.className = `health-score${allHealthy ? '' : ' error'}`;
+    score.innerHTML = `<i class="bi bi-${allHealthy ? 'check-circle' : 'exclamation-triangle'}"></i> ${healthy}/${total} layers operational`;
+    document.getElementById('healthLastChecked').textContent = `${data.checkedAt ? `Last checked ${formatDate(data.checkedAt)}. ` : ''}${Object.entries(checks).filter(([, check]) => check.status !== 'operational').map(([key, check]) => `${healthFields[key]?.label || key}: ${check.message || 'Needs attention'}`).join(' · ') || 'All configured production services responded successfully.'}`;
+};
+
+const loadSystemHealth = async () => {
+    const button = document.getElementById('refreshSystemHealth');
+    if (button) { button.disabled = true; button.innerHTML = '<i class="bi bi-arrow-repeat"></i> Checking…'; }
+    try {
+        renderSystemHealth(await apiFetch('/api/admin/system-health'));
+    } catch (error) {
+        const score = document.getElementById('healthScore');
+        score.className = 'health-score error';
+        score.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Check unavailable';
+        document.getElementById('healthLastChecked').textContent = error.message || 'System health could not be loaded.';
+    } finally {
+        if (button) { button.disabled = false; button.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Check now'; }
+    }
+};
+
 const renderAgentStatus = (data) => {
     document.getElementById('liveAgentName').textContent = data.agentName || 'ElevenLabs intake agent';
     document.getElementById('liveAgentId').textContent = data.agentId || '—';
@@ -295,10 +343,11 @@ const loadConversations = async (append = false) => {
 const loadLiveOperations = async () => {
     if (!currentUser) return;
     setLiveMessage('Checking ElevenLabs, conversation history and project brief storage…');
-    const [agentResult, conversationResult, briefResult] = await Promise.allSettled([
+    const [agentResult, conversationResult, briefResult, healthResult] = await Promise.allSettled([
         apiFetch('/api/elevenlabs/status'),
         loadConversations(false),
-        apiFetch('/api/projects/briefs?limit=10')
+        apiFetch('/api/projects/briefs?limit=10'),
+        loadSystemHealth()
     ]);
     if (agentResult.status === 'fulfilled') renderAgentStatus(agentResult.value);
     else setLiveMessage(agentResult.reason.message, true);
@@ -384,6 +433,7 @@ document.getElementById('adminEmailSignIn').addEventListener('submit', async (ev
 previewButton.addEventListener('click', () => openConsole({ displayName: 'Management team', email: 'Preview mode' }, true));
 document.getElementById('adminSignOut').addEventListener('click', async () => { if (liveRefreshTimer) window.clearInterval(liveRefreshTimer); if (auth) await signOut(auth); currentUser = null; app.hidden = true; gate.hidden = false; showStatus('You have been signed out of the management console.'); });
 document.getElementById('refreshLiveData').addEventListener('click', loadLiveOperations);
+document.getElementById('refreshSystemHealth').addEventListener('click', loadSystemHealth);
 document.getElementById('syncRecentCalls').addEventListener('click', syncRecentCalls);
 document.getElementById('clearStoredBriefs').addEventListener('click', clearStoredBriefs);
 document.getElementById('loadMoreConversations').addEventListener('click', () => loadConversations(true));
