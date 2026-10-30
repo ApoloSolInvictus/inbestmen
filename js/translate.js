@@ -148,9 +148,9 @@
         document.querySelectorAll('[data-translate-switcher]').forEach((switcher) => {
             if (switcher === except) return;
             const toggle = switcher.querySelector('.translate-toggle');
-            const menu = switcher.querySelector('.translate-menu');
-            menu.hidden = true;
-            toggle.setAttribute('aria-expanded', 'false');
+            const menu = switcher._translateMenu || switcher.querySelector('.translate-menu');
+            if (menu) menu.hidden = true;
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
         });
     }
 
@@ -158,12 +158,15 @@
         if (!switcher?.classList.contains('translate-mobile-switcher')) return;
         const header = document.querySelector('.site-header');
         const headerBottom = header?.getBoundingClientRect().bottom || 78;
-        switcher.style.setProperty('--translate-menu-top', `${Math.max(12, Math.round(headerBottom + 8))}px`);
+        const top = `${Math.max(12, Math.round(headerBottom + 8))}px`;
+        switcher.style.setProperty('--translate-menu-top', top);
+        switcher._translateMenu?.style.setProperty('--translate-menu-top', top);
     }
 
     function repositionOpenMobileMenu() {
         document.querySelectorAll('.translate-mobile-switcher').forEach((switcher) => {
-            if (!switcher.querySelector('.translate-menu')?.hidden) positionMobileMenu(switcher);
+            const menu = switcher._translateMenu || switcher.querySelector('.translate-menu');
+            if (menu && !menu.hidden) positionMobileMenu(switcher);
         });
     }
 
@@ -173,6 +176,11 @@
         const close = switcher.querySelector('.translate-menu-close');
         const search = switcher.querySelector('.translate-search');
         const list = switcher.querySelector('.translate-language-list');
+        if (switcher.classList.contains('translate-mobile-switcher')) {
+            menu.classList.add('translate-mobile-overlay');
+            document.body.append(menu);
+            switcher._translateMenu = menu;
+        }
         renderLanguages(list, '');
         toggle.addEventListener('click', () => {
             const open = menu.hidden;
@@ -234,7 +242,7 @@
             }
         }
         document.addEventListener('click', (event) => {
-            if (!event.target.closest('[data-translate-switcher]')) closeMenus();
+            if (!event.target.closest('[data-translate-switcher], .translate-mobile-overlay')) closeMenus();
         });
         document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMenus(); });
         window.addEventListener('resize', repositionOpenMobileMenu);
