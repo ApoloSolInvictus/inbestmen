@@ -34,7 +34,11 @@
     let googleScriptAttempts = 0;
 
     const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const getSavedLanguage = () => window.localStorage.getItem('inbestmen_language') || 'en';
+    const getPathLanguage = () => {
+        const segment = window.location.pathname.split('/').filter(Boolean)[0] || '';
+        return languages.find(([, code]) => code.toLowerCase() === segment.toLowerCase())?.[1] || '';
+    };
+    const getSavedLanguage = () => getPathLanguage() || window.localStorage.getItem('inbestmen_language') || 'en';
 
     const saturnIcon = '<span class="saturn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(-24 12 12)"></ellipse><circle cx="12" cy="12" r="4.2"></circle></svg></span>';
 
@@ -123,6 +127,19 @@
         });
     }
 
+    function isLandingPath() {
+        const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
+        const pathLanguage = getPathLanguage();
+        return pathname === '/' || pathname === '/index.html' || pathname === `/${pathLanguage}`;
+    }
+
+    function syncLanguageUrl(code) {
+        if (!isLandingPath()) return;
+        const pathname = `/${code}`;
+        const nextUrl = `${pathname}${window.location.search}${window.location.hash}`;
+        if (window.location.pathname !== pathname) window.history.replaceState(null, '', nextUrl);
+    }
+
     function waitForGoogleSelect() {
         if (googleSelectRetryTimer) return;
         let attempts = 0;
@@ -145,9 +162,10 @@
         check();
     }
 
-    function setGoogleLanguage(code, { reload = true } = {}) {
+    function setGoogleLanguage(code, { reload = true, syncUrl = false } = {}) {
         pendingLanguage = code;
         const previousLanguage = getSavedLanguage();
+        if (syncUrl) syncLanguageUrl(code);
         const hadCorrectCookie = code === 'en' ? !getGoogleLanguageCookie() : getGoogleLanguageCookie() === `/en/${code}`;
         const shouldRefresh = previousLanguage !== code || !hadCorrectCookie;
         window.localStorage.setItem('inbestmen_language', code);
@@ -177,7 +195,13 @@
 
     function applyPendingLanguage() {
         const language = pendingLanguage || getSavedLanguage();
-        if (language && language !== 'en') setGoogleLanguage(language, { reload: false });
+        if (!language) return;
+        syncLanguageUrl(language);
+        if (language === 'en') {
+            if (getGoogleLanguageCookie()) setGoogleLanguage('en', { reload: false });
+            return;
+        }
+        setGoogleLanguage(language, { reload: false });
     }
 
     window.googleTranslateElementInit = function () {
@@ -284,12 +308,12 @@
         list.addEventListener('click', (event) => {
             const option = event.target.closest('[data-language]');
             if (!option) return;
-            setGoogleLanguage(option.dataset.language);
+            setGoogleLanguage(option.dataset.language, { syncUrl: true });
             menu.hidden = true;
             toggle.setAttribute('aria-expanded', 'false');
         });
         switcher.querySelector('[data-translate-reset]').addEventListener('click', () => {
-            setGoogleLanguage('en');
+            setGoogleLanguage('en', { syncUrl: true });
             menu.hidden = true;
             toggle.setAttribute('aria-expanded', 'false');
         });
