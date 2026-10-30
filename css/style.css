@@ -160,3 +160,20 @@ h1, h2, h3, p { margin-top: 0; }
 .agent-widget-note { color: rgba(255,255,255,.48); font-family: 'DM Mono', monospace; font-size: 9px; margin: 16px 0 0; position: relative; text-align: center; z-index: 1; }
 .agent-widget-note i { color: #2ed8d0; margin-right: 4px; }
 @media (max-width: 575.98px) { .agent-widget-heading { display: block; }.agent-widget-status { display: inline-block; margin-top: 15px; }.agent-widget-panel #inbestmenAgentWidget { min-height: 260px; }.agent-widget-panel elevenlabs-convai { height: 260px; min-height: 260px; } }
+
+/* A shared solar-system visual keeps the public project cards aligned with the Dashboard orbit. */
+.solar-system-art { background: radial-gradient(circle at 72% 30%, rgba(46,216,208,.28), transparent 24%), linear-gradient(135deg, #07162f, #163e73 55%, #0aa6b5) !important; }
+.solar-system-art.art-orbit { background: radial-gradient(circle at 72% 30%, rgba(114,88,239,.42), transparent 24%), linear-gradient(135deg, #07162f, #3b287b 55%, #0e8eaa) !important; }
+.solar-system-art.art-soil { background: radial-gradient(circle at 72% 30%, rgba(201,237,106,.3), transparent 24%), linear-gradient(135deg, #07162f, #164b55 55%, #39775f) !important; }
+.solar-system-art::before { background: radial-gradient(circle at 11% 23%, rgba(255,255,255,.9) 0 1px, transparent 1.8px), radial-gradient(circle at 27% 74%, rgba(255,255,255,.65) 0 1px, transparent 1.8px), radial-gradient(circle at 83% 20%, rgba(255,255,255,.8) 0 1px, transparent 1.8px), radial-gradient(circle at 91% 78%, rgba(201,237,106,.8) 0 1.5px, transparent 2px); content: ''; inset: 0; opacity: .85; position: absolute; }
+.solar-system-art::after { border: 1px solid rgba(255,255,255,.24); border-radius: 50%; content: ''; height: 145%; left: -22%; position: absolute; top: -27%; transform: rotate(-20deg); width: 145%; }
+.solar-system-scene { inset: 0; overflow: hidden; position: absolute; }
+.solar-system-sun { background: radial-gradient(circle at 31% 25%, #e1ffdc 0 5%, #73e6c2 24%, #22c7d2 58%, #2452a1 100%); border-radius: 50%; box-shadow: 0 0 26px rgba(102,244,226,.55), inset -12px -14px 20px rgba(7,22,47,.25); height: 76px; left: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); width: 76px; }
+.solar-system-orbit { border: 1px solid rgba(255,255,255,.55); border-radius: 50%; height: 66%; left: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%) rotate(-18deg); width: 70%; }
+.solar-system-orbit::after { background: #c9ed6a; border-radius: 50%; box-shadow: 0 0 12px rgba(201,237,106,.7); content: ''; height: 9px; position: absolute; right: 8%; top: 10%; width: 9px; }
+.solar-system-orbit.orbit-two { border-color: rgba(46,216,208,.62); height: 88%; transform: translate(-50%, -50%) rotate(23deg); width: 108%; }
+.solar-system-orbit.orbit-two::after { background: #8fe8ff; box-shadow: 0 0 10px rgba(143,232,255,.7); height: 7px; left: 13%; right: auto; top: 78%; width: 7px; }
+.solar-system-orbit.orbit-three { border-color: rgba(114,88,239,.58); height: 112%; transform: translate(-50%, -50%) rotate(-34deg); width: 126%; }
+.solar-system-orbit.orbit-three::after { background: #f2f0ff; box-shadow: 0 0 9px rgba(255,255,255,.75); bottom: 7%; height: 6px; left: auto; right: 19%; top: auto; width: 6px; }
+.solar-system-art .art-label, .solar-system-art .art-symbol { z-index: 2; }
+@media (max-width: 575px) { .solar-system-sun { height: 64px; width: 64px; }.solar-system-orbit { height: 64%; width: 76%; }.solar-system-orbit.orbit-two { height: 86%; width: 116%; }.solar-system-orbit.orbit-three { height: 112%; width: 135%; } }
