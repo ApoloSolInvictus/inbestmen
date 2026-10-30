@@ -33,7 +33,7 @@
     const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const getSavedLanguage = () => window.localStorage.getItem('inbestmen_language') || 'en';
 
-    const saturnIcon = '<span class="saturn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(-24 12 12)"></ellipse><circle cx="12" cy="12" r="4.2"></circle><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(24 12 12)"></ellipse></svg></span>';
+    const saturnIcon = '<span class="saturn-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(-24 12 12)"></ellipse><circle cx="12" cy="12" r="4.2"></circle></svg></span>';
 
     function getHost() {
         const candidates = [
