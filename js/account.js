@@ -2,6 +2,8 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import './coin-mark.js';
 
+if (!document.querySelector('script[src="js/translate.js"]')) { const script = document.createElement('script'); script.src = 'js/translate.js'; script.defer = true; document.body.append(script); }
+
 const config = window.INBESTMEN_FIREBASE_CONFIG;
 const status = document.getElementById('accountStatus');
 const showStatus = (message, error = false) => { status.textContent = message; status.className = `auth-status show${error ? ' error' : ''}`; };
