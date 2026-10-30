@@ -32,6 +32,8 @@
     let pendingLanguage = null;
     let googleSelectRetryTimer = null;
     let googleScriptAttempts = 0;
+    let landingRefreshTimer = null;
+    let lastLandingRefresh = 0;
 
     const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const getPathLanguage = () => {
@@ -218,6 +220,21 @@
         setGoogleLanguage(language, { reload: false });
     }
 
+    function refreshLandingTranslation() {
+        if (!isLandingPath()) return;
+        const language = getSavedLanguage();
+        if (language === 'en' || !getGoogleSelect()) return;
+        const now = Date.now();
+        if (now - lastLandingRefresh < 1800) return;
+        lastLandingRefresh = now;
+        setGoogleLanguage(language, { reload: false });
+    }
+
+    function scheduleLandingTranslation() {
+        if (!isLandingPath()) return;
+        [450, 1200, 2600].forEach((delay) => window.setTimeout(refreshLandingTranslation, delay));
+    }
+
     window.googleTranslateElementInit = function () {
         if (googleReady || googleInitializing || !window.google || !window.google.translate) return;
         googleInitializing = true;
@@ -375,9 +392,15 @@
         document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMenus(); });
         window.addEventListener('resize', repositionOpenMobileMenu);
         window.addEventListener('scroll', repositionOpenMobileMenu, { passive: true });
+        window.addEventListener('inbestmen:content-updated', () => {
+            if (!isLandingPath()) return;
+            window.clearTimeout(landingRefreshTimer);
+            landingRefreshTimer = window.setTimeout(refreshLandingTranslation, 250);
+        });
         loadGoogleTranslate();
         window.setTimeout(hideGoogleChrome, 250);
         window.setTimeout(hideGoogleChrome, 1000);
+        scheduleLandingTranslation();
         if (googleReady) applyPendingLanguage();
     }
 

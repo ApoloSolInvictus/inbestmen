@@ -73,6 +73,7 @@
         feature.innerHTML = card(projects[0], true);
         side.innerHTML = projects.slice(1).map((project) => card(project)).join('');
         document.querySelectorAll('[data-public-project]').forEach((button) => button.addEventListener('click', () => open(projects.find((project) => project.id === button.dataset.publicProject), button)));
+        window.dispatchEvent(new CustomEvent('inbestmen:content-updated', { detail: { source: 'public-projects', count: projects.length } }));
     };
 
     const load = async () => {
