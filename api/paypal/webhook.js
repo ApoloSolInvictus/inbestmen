@@ -15,7 +15,7 @@ export default async function handler(request, response) {
 
         const eventType = String(event.event_type || '').toUpperCase();
         const resource = event.resource || {};
-        const itemStatus = eventType.includes('SUCCEEDED') ? 'SUCCEEDED' : eventType.includes('FAILED') ? 'FAILED' : eventType.includes('CANCELED') ? 'CANCELED' : eventType.includes('RETURNED') ? 'RETURNED' : eventType.includes('REFUNDED') ? 'REFUNDED' : eventType.includes('BLOCKED') ? 'BLOCKED' : eventType.includes('HELD') ? 'HELD' : eventType.includes('PROCESSING') ? 'PROCESSING' : '';
+        const itemStatus = eventType.includes('SUCCEEDED') ? 'SUCCEEDED' : eventType.includes('FAILED') ? 'FAILED' : eventType.includes('DENIED') ? 'FAILED' : eventType.includes('CANCELED') ? 'CANCELED' : eventType.includes('RETURNED') ? 'RETURNED' : eventType.includes('REFUNDED') ? 'REFUNDED' : eventType.includes('UNCLAIMED') ? 'UNCLAIMED' : eventType.includes('BLOCKED') ? 'BLOCKED' : eventType.includes('HELD') ? 'HELD' : eventType.includes('PROCESSING') ? 'PROCESSING' : '';
         const itemId = resource.sender_item_id || resource.payout_item_id || '';
         if (itemId && itemStatus) {
             await markProjectPayoutStatus({ payoutId: itemId, status: itemStatus, paypalBatchId: resource.payout_batch_id || '', paypalItemId: resource.payout_item_id || '', failureReason: resource.errors?.[0]?.message || '' });
