@@ -28,8 +28,10 @@
 
     const languageCodes = languages.map((language) => language[1]).join(',');
     let googleReady = false;
+    let googleInitializing = false;
     let pendingLanguage = null;
     let googleSelectRetryTimer = null;
+    let googleScriptAttempts = 0;
 
     const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const getSavedLanguage = () => window.localStorage.getItem('inbestmen_language') || 'en';
@@ -88,6 +90,39 @@
         return document.querySelector('.goog-te-combo');
     }
 
+    function getGoogleLanguageCookie() {
+        const cookie = document.cookie.split('; ').find((part) => part.startsWith('googtrans='));
+        return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : '';
+    }
+
+    function setGoogleLanguageCookie(code) {
+        const hostname = window.location.hostname;
+        const cookieAttributes = 'path=/;SameSite=Lax';
+        const domains = hostname && hostname.includes('.') ? ['', `;domain=.${hostname}`] : [''];
+        const value = code === 'en' ? '' : `/en/${code}`;
+
+        domains.forEach((domain) => {
+            document.cookie = value
+                ? `googtrans=${encodeURIComponent(value)};${cookieAttributes}${domain}`
+                : `googtrans=;expires=Thu, 01 Jan 1970 00:00:00 GMT;${cookieAttributes}${domain}`;
+        });
+    }
+
+    function scheduleTranslationRefresh(code, shouldRefresh, reload, hadCorrectCookie) {
+        if (!shouldRefresh || (!reload && hadCorrectCookie)) return;
+        const key = `inbestmen_translate_refresh_${code}`;
+        if (window.sessionStorage.getItem(key) === '1') return;
+        window.sessionStorage.setItem(key, '1');
+        window.setTimeout(() => window.location.reload(), 350);
+    }
+
+    function refreshLanguageOptions() {
+        document.querySelectorAll('[data-translate-switcher]').forEach((switcher) => {
+            const list = switcher.querySelector('.translate-language-list');
+            if (list) renderLanguages(list, switcher.querySelector('.translate-search')?.value || '');
+        });
+    }
+
     function waitForGoogleSelect() {
         if (googleSelectRetryTimer) return;
         let attempts = 0;
@@ -95,10 +130,10 @@
             const select = getGoogleSelect();
             if (select && select.options.length > 1) {
                 googleSelectRetryTimer = null;
-                setGoogleLanguage(pendingLanguage || getSavedLanguage());
+                setGoogleLanguage(pendingLanguage || getSavedLanguage(), { reload: false });
                 return;
             }
-            if (attempts++ >= 40) {
+            if (attempts++ >= 60) {
                 googleSelectRetryTimer = null;
                 return;
             }
@@ -110,37 +145,55 @@
         check();
     }
 
-    function setGoogleLanguage(code) {
+    function setGoogleLanguage(code, { reload = true } = {}) {
         pendingLanguage = code;
+        const previousLanguage = getSavedLanguage();
+        const hadCorrectCookie = code === 'en' ? !getGoogleLanguageCookie() : getGoogleLanguageCookie() === `/en/${code}`;
+        const shouldRefresh = previousLanguage !== code || !hadCorrectCookie;
+        window.localStorage.setItem('inbestmen_language', code);
+        setGoogleLanguageCookie(code);
+        if (hadCorrectCookie) window.sessionStorage.removeItem(`inbestmen_translate_refresh_${code}`);
+
         const select = getGoogleSelect();
         if (!select || select.options.length < 2) {
             waitForGoogleSelect();
+            scheduleTranslationRefresh(code, shouldRefresh, reload, hadCorrectCookie);
             return;
         }
+
+        const targetValue = code === 'en' ? '' : code;
+        const option = Array.from(select.options).find((item) => item.value === targetValue);
+        if (code !== 'en' && !option) {
+            scheduleTranslationRefresh(code, shouldRefresh, reload, hadCorrectCookie);
+            return;
+        }
+
         pendingLanguage = null;
-        select.value = code === 'en' ? '' : code;
+        select.value = targetValue;
         select.dispatchEvent(new Event('change', { bubbles: true }));
-        window.localStorage.setItem('inbestmen_language', code);
-        document.querySelectorAll('[data-translate-switcher]').forEach((switcher) => {
-            const list = switcher.querySelector('.translate-language-list');
-            if (list) renderLanguages(list, switcher.querySelector('.translate-search')?.value || '');
-        });
+        refreshLanguageOptions();
+        scheduleTranslationRefresh(code, shouldRefresh, reload, hadCorrectCookie);
     }
 
     function applyPendingLanguage() {
         const language = pendingLanguage || getSavedLanguage();
-        if (language && language !== 'en') setGoogleLanguage(language);
+        if (language && language !== 'en') setGoogleLanguage(language, { reload: false });
     }
 
     window.googleTranslateElementInit = function () {
-        if (!window.google || !window.google.translate) return;
-        new window.google.translate.TranslateElement({
-            pageLanguage: 'en',
-            includedLanguages: languageCodes,
-            autoDisplay: false,
-            multilanguagePage: true
-        }, 'google_translate_element');
-        googleReady = true;
+        if (googleReady || googleInitializing || !window.google || !window.google.translate) return;
+        googleInitializing = true;
+        try {
+            new window.google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: languageCodes,
+                autoDisplay: false,
+                multilanguagePage: true
+            }, 'google_translate_element');
+            googleReady = true;
+        } finally {
+            googleInitializing = false;
+        }
         window.setTimeout(() => {
             applyPendingLanguage();
             waitForGoogleSelect();
@@ -152,7 +205,14 @@
         const script = document.createElement('script');
         script.id = 'google_translate_script';
         script.async = true;
-        script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+        script.src = `https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit&v=${Date.now()}`;
+        script.onload = () => {
+            if (window.google?.translate && !googleReady) window.googleTranslateElementInit();
+        };
+        script.onerror = () => {
+            script.remove();
+            if (googleScriptAttempts++ < 2) window.setTimeout(loadGoogleTranslate, 1800);
+        };
         document.head.append(script);
     }
 
