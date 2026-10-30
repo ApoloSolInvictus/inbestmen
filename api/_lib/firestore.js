@@ -115,6 +115,24 @@ const listCollectionDocuments = async (collection, limit = 100) => {
     return (data.documents || []).map((document) => ({ id: document.name.split('/').pop(), ...fieldsToObject(document.fields || {}) }));
 };
 
+export const countCollectionDocuments = async (collection, limit = 10000) => {
+    if (!/^[a-zA-Z0-9_-]+$/.test(String(collection || ''))) throw new Error('Invalid Firestore collection.');
+    const { account, token } = await getAccessToken();
+    const pageSize = Math.min(1000, Math.max(1, Number(limit) || 1));
+    let pageToken = '';
+    let count = 0;
+    do {
+        const query = new URLSearchParams({ pageSize: String(pageSize) });
+        if (pageToken) query.set('pageToken', pageToken);
+        const response = await fetch(`${collectionUrl(account.projectId, collection)}?${query.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await response.json();
+        if (!response.ok) throw new Error(`Firestore could not count ${collection} (${response.status}).`);
+        count += (data.documents || []).length;
+        pageToken = data.nextPageToken || '';
+    } while (pageToken && count < Number(limit));
+    return Math.min(count, Number(limit));
+};
+
 export const listProjectDonationDocuments = async (limit = 1000) => listCollectionDocuments('projectDonations', limit);
 export const listProjectPayoutDocuments = async (limit = 1000) => listCollectionDocuments('projectPayouts', limit);
 

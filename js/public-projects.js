@@ -20,6 +20,26 @@
     const projectDate = (project) => Date.parse(project.approvedAt || '') || 0;
     const progress = (project) => project.ibGoal > 0 ? Math.min(100, Math.round((project.ibRaised / project.ibGoal) * 100)) : 0;
 
+    const compactNumber = (value) => {
+        const amount = number(value);
+        if (amount >= 1000000) return `${(amount / 1000000).toFixed(amount % 1000000 ? 1 : 0)}M`;
+        if (amount >= 1000) return `${(amount / 1000).toFixed(amount % 1000 ? 1 : 0)}k`;
+        return formatNumber(amount);
+    };
+
+    const renderStats = (stats = {}) => {
+        const values = {
+            publicStatProjects: formatNumber(stats.approvedProjects),
+            publicStatCountries: formatNumber(stats.connectedCountries),
+            publicStatMembers: compactNumber(stats.communityMembers),
+            publicStatCommitments: `$${compactNumber(stats.totalCommunityCommitmentsUsd)}`
+        };
+        Object.entries(values).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
+    };
+
     const proposalHref = (value) => {
         const url = String(value || '').trim();
         return /^https:\/\//i.test(url) || /^project-proposal\.html(?:\?|#|$)/i.test(url) ? url : '';
@@ -59,6 +79,7 @@
             const response = await fetch('/api/projects/public?limit=100', { headers: { Accept: 'application/json' } });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.error || `Projects unavailable (${response.status}).`);
+            renderStats(data.stats || {});
             projects = (Array.isArray(data.projects) ? data.projects : []).sort((first, second) => projectDate(second) - projectDate(first));
             render();
         } catch (loadError) {

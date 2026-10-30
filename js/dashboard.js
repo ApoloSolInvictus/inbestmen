@@ -102,6 +102,31 @@ const setWalletBalance = (balance) => {
     if (modalBalance) modalBalance.textContent = formatNumber(walletBalance);
 };
 
+const renderNetworkStats = (stats = {}) => {
+    const values = {
+        memberApprovedProjects: Number(stats.approvedProjects || 0),
+        memberConnectedCountries: Number(stats.connectedCountries || 0),
+        memberCommunityMembers: Number(stats.communityMembers || 0),
+        memberTotalDonated: Number(stats.totalDonatedIb || 0)
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = formatNumber(value);
+    });
+};
+
+const loadNetworkStats = async () => {
+    try {
+        const response = await fetch('/api/projects/public?limit=100', { headers: { Accept: 'application/json' } });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `Network data unavailable (${response.status}).`);
+        renderNetworkStats(data.stats || {});
+    } catch (error) {
+        renderNetworkStats();
+        console.warn(error);
+    }
+};
+
 const projectCard = (project, isFuture = false) => {
     const progress = Math.min(100, Number(project.progress ?? 0));
     const href = proposalHref(project);
@@ -134,6 +159,7 @@ const renderProjects = () => {
 };
 
 renderProjects();
+loadNetworkStats();
 
 const apiFetch = async (path, options = {}) => {
     if (!currentUser) throw new Error('Sign in to use your inBestmen wallet.');

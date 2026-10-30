@@ -116,6 +116,9 @@ const renderPaymentLedger = (data) => {
     document.getElementById('ledgerPaidNote').textContent = `${summary.projectsWithAccounts || 0} project account${summary.projectsWithAccounts === 1 ? '' : 's'} configured`;
     document.getElementById('paymentsDueMetric').textContent = formatIbUsd(summary.payoutsDueIb);
     document.getElementById('paymentsDueMetricNote').innerHTML = `<i class="bi bi-wallet2"></i> ${summary.pendingPayoutsIb ? 'Payouts in transit' : 'Closed-week obligations'}`;
+    const completedProjects = projects.filter((project) => Number(project.ibGoal || 0) > 0 && Number(project.totalDonatedIb || 0) >= Number(project.ibGoal || 0));
+    document.getElementById('completedProjectsMetric').textContent = String(completedProjects.length);
+    document.getElementById('completedProjectsMetricNote').innerHTML = `<i class="bi bi-stars"></i> ${completedProjects.length ? 'Goals reached' : 'No completed projects yet'}`;
     document.getElementById('paymentLedgerState').innerHTML = `<i class="bi bi-check-circle"></i> ${projects.length} approved project${projects.length === 1 ? '' : 's'}`;
     document.getElementById('paymentLedgerStateMessage').textContent = week.label ? `Closed period: ${week.label}. Weekly amounts are capped by each approved project goal.` : 'Payment ledger loaded.';
     const body = document.getElementById('paymentLedgerBody');
