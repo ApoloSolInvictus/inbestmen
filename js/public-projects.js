@@ -32,7 +32,8 @@
             publicStatProjects: formatNumber(stats.approvedProjects),
             publicStatCountries: formatNumber(stats.connectedCountries),
             publicStatMembers: compactNumber(stats.communityMembers),
-            publicStatCommitments: `$${compactNumber(stats.totalCommunityCommitmentsUsd)}`
+            publicStatCommitments: `$${compactNumber(stats.totalCommunityCommitmentsUsd)}`,
+            publicHeroMembers: `${compactNumber(stats.communityMembers)} registered members`
         };
         Object.entries(values).forEach(([id, value]) => {
             const element = document.getElementById(id);
