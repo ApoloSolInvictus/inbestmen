@@ -154,6 +154,19 @@
         });
     }
 
+    function positionMobileMenu(switcher) {
+        if (!switcher?.classList.contains('translate-mobile-switcher')) return;
+        const header = document.querySelector('.site-header');
+        const headerBottom = header?.getBoundingClientRect().bottom || 78;
+        switcher.style.setProperty('--translate-menu-top', `${Math.max(12, Math.round(headerBottom + 8))}px`);
+    }
+
+    function repositionOpenMobileMenu() {
+        document.querySelectorAll('.translate-mobile-switcher').forEach((switcher) => {
+            if (!switcher.querySelector('.translate-menu')?.hidden) positionMobileMenu(switcher);
+        });
+    }
+
     function wireSwitcher(switcher) {
         const toggle = switcher.querySelector('.translate-toggle');
         const menu = switcher.querySelector('.translate-menu');
@@ -164,6 +177,7 @@
         toggle.addEventListener('click', () => {
             const open = menu.hidden;
             closeMenus(switcher);
+            if (open) positionMobileMenu(switcher);
             menu.hidden = !open;
             toggle.setAttribute('aria-expanded', String(open));
             if (open) window.setTimeout(() => search.focus(), 0);
@@ -223,6 +237,8 @@
             if (!event.target.closest('[data-translate-switcher]')) closeMenus();
         });
         document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMenus(); });
+        window.addEventListener('resize', repositionOpenMobileMenu);
+        window.addEventListener('scroll', repositionOpenMobileMenu, { passive: true });
         loadGoogleTranslate();
         window.setTimeout(hideGoogleChrome, 250);
         window.setTimeout(hideGoogleChrome, 1000);

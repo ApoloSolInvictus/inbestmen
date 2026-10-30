@@ -49,6 +49,11 @@ html, body { top: 0 !important; }
 }
 
 @media (max-width: 991px) {
+    .site-header { position: sticky; z-index: 3000; }
+    .site-header .navbar { position: relative; z-index: 3001; }
     .site-header .nav-actions > .translate-switcher { display: none; }
-    .site-header .navbar > .container > .translate-mobile-switcher { display: block; margin-left: auto; margin-right: 7px; }
+    .site-header .navbar > .container > .translate-mobile-switcher { display: block; margin-left: auto; margin-right: 7px; position: relative; z-index: 5000; }
+    .translate-mobile-switcher .translate-toggle { background: rgba(255,255,255,.78); }
+    .translate-mobile-switcher .translate-menu { max-height: calc(100dvh - var(--translate-menu-top, 88px) - 16px); overflow: hidden; position: fixed; right: 12px; top: var(--translate-menu-top, 88px); width: min(320px, calc(100vw - 24px)); z-index: 6000; }
+    .translate-mobile-switcher .translate-language-list { max-height: min(270px, calc(100dvh - var(--translate-menu-top, 88px) - 190px)); }
 }
