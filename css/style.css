@@ -11,6 +11,10 @@
     --shadow: 0 24px 70px rgba(7, 22, 47, .12);
 }
 
+.process-saturn-icon { display: block; height: 25px; overflow: visible; width: 25px; }
+.process-saturn-icon ellipse { fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.8; }
+.process-saturn-icon circle { fill: currentColor; stroke: none; }
+
 * { box-sizing: border-box; }
 html { max-width: 100%; overflow-x: hidden; scroll-behavior: smooth; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Manrope', sans-serif; font-size: 15px; line-height: 1.7; }
