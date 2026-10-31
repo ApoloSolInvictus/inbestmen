@@ -198,13 +198,6 @@
         window.dispatchEvent(new CustomEvent('inbestmen:language-changed', { detail: { language: code } }));
         if (hadCorrectCookie) window.sessionStorage.removeItem(`inbestmen_translate_refresh_${code}`);
 
-        if (isLandingPath()) {
-            pendingLanguage = null;
-            refreshLanguageOptions();
-            scheduleLandingContentTranslation();
-            return;
-        }
-
         const select = getGoogleSelect();
         if (!select || select.options.length < 2) {
             waitForGoogleSelect();
@@ -566,16 +559,11 @@
         window.addEventListener('resize', repositionOpenMobileMenu);
         window.addEventListener('scroll', repositionOpenMobileMenu, { passive: true });
         window.addEventListener('inbestmen:content-updated', () => {
-            if (!isLandingPath()) return;
-            window.clearTimeout(landingRefreshTimer);
-            landingRefreshTimer = window.setTimeout(refreshLandingTranslation, 250);
-            scheduleLandingContentTranslation();
+            refreshLanguageOptions();
         });
-        if (!isLandingPath()) loadGoogleTranslate();
+        loadGoogleTranslate();
         window.setTimeout(hideGoogleChrome, 250);
         window.setTimeout(hideGoogleChrome, 1000);
-        scheduleLandingTranslation();
-        scheduleLandingContentTranslation();
         if (googleReady) applyPendingLanguage();
     }
 
