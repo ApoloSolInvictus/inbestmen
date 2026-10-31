@@ -26,7 +26,6 @@
         ['Yoruba', 'yo'], ['Zulu', 'zu']
     ];
 
-    const languageCodes = languages.map((language) => language[1]).join(',');
     let googleReady = false;
     let googleInitializing = false;
     let pendingLanguage = null;
@@ -128,7 +127,11 @@
         if (!language) return;
         window.localStorage.setItem('inbestmen_language', language);
         setGoogleLanguageCookie(language);
-        document.documentElement.lang = language;
+        document.documentElement.dataset.inbestmenLanguage = language;
+        // Keep the source document language in English until Google finishes
+        // translating it. Setting lang to the target language here makes the
+        // widget believe the page is already translated.
+        document.documentElement.lang = 'en';
     }
 
     function fireGoogleChange(select) {
@@ -194,7 +197,7 @@
         const shouldRefresh = previousLanguage !== code || !hadCorrectCookie;
         window.localStorage.setItem('inbestmen_language', code);
         setGoogleLanguageCookie(code);
-        document.documentElement.lang = code;
+        document.documentElement.lang = 'en';
         document.documentElement.dataset.inbestmenLanguage = code;
         window.dispatchEvent(new CustomEvent('inbestmen:language-changed', { detail: { language: code } }));
         if (hadCorrectCookie) window.sessionStorage.removeItem(`inbestmen_translate_refresh_${code}`);
@@ -370,7 +373,7 @@
             restoreLandingOriginal();
             return;
         }
-        document.documentElement.lang = language;
+        document.documentElement.lang = 'en';
         const textEntries = getLandingTextNodes().map((node) => ({ node, value: landingTextOriginals.get(node) }));
         const attributeEntries = getLandingAttributes();
         try {
@@ -408,7 +411,6 @@
         try {
             new window.google.translate.TranslateElement({
                 pageLanguage: 'en',
-                includedLanguages: languageCodes,
                 autoDisplay: false,
                 multilanguagePage: true
             }, 'google_translate_element');
