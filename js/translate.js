@@ -430,9 +430,6 @@
         script.id = 'google_translate_script';
         script.async = true;
         script.src = `https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit&v=${Date.now()}`;
-        script.onload = () => {
-            if (window.google?.translate && !googleReady) window.googleTranslateElementInit();
-        };
         script.onerror = () => {
             script.remove();
             if (googleScriptAttempts++ < 2) window.setTimeout(loadGoogleTranslate, 1800);
