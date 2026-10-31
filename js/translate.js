@@ -71,7 +71,8 @@
 
     function buildSwitcher() {
         const switcher = document.createElement('div');
-        switcher.className = 'translate-switcher';
+        switcher.className = 'translate-switcher notranslate';
+        switcher.setAttribute('translate', 'no');
         switcher.dataset.translateSwitcher = '';
         switcher.innerHTML = `<button class="translate-toggle" type="button" aria-label="Translate page" aria-expanded="false" aria-haspopup="true">${saturnIcon}<span class="translate-label">Translate</span></button><div class="translate-menu" role="dialog" aria-label="Choose a language" hidden><div class="translate-menu-header"><strong>Choose a language</strong><button class="translate-menu-close" type="button" aria-label="Close language menu">×</button></div><label class="translate-search-label" for="inbestmenLanguageSearch">Search language</label><input id="inbestmenLanguageSearch" class="translate-search" type="search" autocomplete="off" placeholder="Search languages"><div class="translate-language-list"></div><button class="translate-reset" type="button" data-translate-reset>English (original)</button></div>`;
         return switcher;
@@ -450,7 +451,7 @@
         if (document.querySelector('link[href$="css/translate.css"]')) return;
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'css/translate.css';
+        link.href = new URL('/css/translate.css', window.location.origin).href;
         document.head.append(link);
     }
 
@@ -525,8 +526,15 @@
             const googleHost = document.createElement('div');
             googleHost.id = 'google_translate_element';
             googleHost.setAttribute('aria-hidden', 'true');
+            googleHost.className = 'notranslate';
+            googleHost.setAttribute('translate', 'no');
             document.body.append(googleHost);
         }
+        const googleHost = document.getElementById('google_translate_element');
+        googleHost?.classList.add('notranslate');
+        googleHost?.setAttribute('translate', 'no');
+        document.documentElement.setAttribute('translate', 'yes');
+        document.body.setAttribute('translate', 'yes');
         if (!document.querySelector('[data-translate-switcher]')) {
             const { element, mode } = getHost();
             const switcher = buildSwitcher();

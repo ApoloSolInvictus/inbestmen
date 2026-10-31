@@ -3,6 +3,8 @@
     if (!host) return;
 
     const agentId = host.dataset.agentId;
+    host.classList.add('notranslate');
+    host.setAttribute('translate', 'no');
     const localeAliases = { iw: 'he', jw: 'jv' };
     const localePattern = /^[a-z]{2,3}(?:-[a-z]{2,4})?$/i;
     let signedUrl = '';
