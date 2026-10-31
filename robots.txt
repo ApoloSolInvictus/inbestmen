@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /auth.html
+Disallow: /register.html
+Disallow: /forgot-password.html
+
+Sitemap: https://www.inbestmen.app/sitemap.xml
