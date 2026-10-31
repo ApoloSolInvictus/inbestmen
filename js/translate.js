@@ -489,6 +489,7 @@
         const close = switcher.querySelector('.translate-menu-close');
         const search = switcher.querySelector('.translate-search');
         const list = switcher.querySelector('.translate-language-list');
+        const reset = switcher.querySelector('[data-translate-reset]');
         if (switcher.classList.contains('translate-mobile-switcher')) {
             menu.classList.add('translate-mobile-overlay');
             document.body.append(menu);
@@ -512,7 +513,7 @@
             menu.hidden = true;
             toggle.setAttribute('aria-expanded', 'false');
         });
-        switcher.querySelector('[data-translate-reset]').addEventListener('click', () => {
+        reset.addEventListener('click', () => {
             setGoogleLanguage('en', { syncUrl: true });
             menu.hidden = true;
             toggle.setAttribute('aria-expanded', 'false');
