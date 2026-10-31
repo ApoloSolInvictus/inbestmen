@@ -193,6 +193,9 @@
         const shouldRefresh = previousLanguage !== code || !hadCorrectCookie;
         window.localStorage.setItem('inbestmen_language', code);
         setGoogleLanguageCookie(code);
+        document.documentElement.lang = code;
+        document.documentElement.dataset.inbestmenLanguage = code;
+        window.dispatchEvent(new CustomEvent('inbestmen:language-changed', { detail: { language: code } }));
         if (hadCorrectCookie) window.sessionStorage.removeItem(`inbestmen_translate_refresh_${code}`);
 
         if (isLandingPath()) {
