@@ -44,11 +44,16 @@ const defaultPublicBrief = (project) => ({
 function normalizeProject(project) {
     const ibRaised = Math.max(0, Number(String(project.ibRaised ?? project.coins ?? 0).replace(/,/g, '')) || 0);
     const ibGoal = Math.max(0, Number(String(project.ibGoal ?? project.goal ?? 0).replace(/,/g, '')) || 0);
+    const progressPercent = Math.min(100, Math.max(0, Math.round(Number(project.progressPercent ?? project.workProgress ?? 0) || 0)));
     return {
         ...project,
         id: String(project.id || '').trim(),
         ibRaised,
         ibGoal,
+        progressPercent,
+        progressUpdates: Array.isArray(project.progressUpdates) ? project.progressUpdates : [],
+        projectUrl: String(project.projectUrl || ''),
+        stage: String(project.stage || project.publicBrief?.stage || '').trim(),
         progress: ibGoal ? Math.min(100, Math.round((ibRaised / ibGoal) * 100)) : 0,
         proposalUrl: Object.prototype.hasOwnProperty.call(project, 'proposalUrl') ? (project.proposalUrl || '') : (project.url || (project.id ? `project-proposal.html?id=${encodeURIComponent(project.id)}` : '')),
         publicBrief: project.publicBrief || defaultPublicBrief({ ...project, ibGoal })
@@ -63,6 +68,12 @@ function proposalHref(project) {
     const value = String(project.proposalUrl || '').trim();
     if (!value) return '';
     if (/^https:\/\//i.test(value) || /^(?:project-proposal\.html|https?:\/\/)/i.test(value)) return value;
+    return '';
+}
+
+function projectHref(project) {
+    const value = String(project.projectUrl || '').trim();
+    if (/^https:\/\//i.test(value) || /^project-proposal\.html(?:\?|#|$)/i.test(value)) return value;
     return '';
 }
 
@@ -209,11 +220,36 @@ const modalValue = (value, fallback = 'Not captured') => {
     return String(value ?? '').trim() || fallback;
 };
 
+const progressDateLabel = (value) => {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.valueOf()) ? date.toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'Recent update';
+};
+
+const renderProjectUpdates = (project) => {
+    const timeline = document.getElementById('projectModalUpdates');
+    const updates = (Array.isArray(project.progressUpdates) ? project.progressUpdates : [])
+        .filter((update) => update && typeof update === 'object')
+        .slice()
+        .sort((first, second) => Date.parse(second.publishedAt || second.date || second.createdAt || '') - Date.parse(first.publishedAt || first.date || first.createdAt || ''));
+    if (!updates.length) {
+        timeline.innerHTML = '<p class="project-modal-muted">No progress updates have been published yet. The project team will add milestones here as the work advances.</p>';
+        return;
+    }
+    timeline.innerHTML = updates.map((update) => {
+        const date = update.publishedAt || update.date || update.createdAt;
+        const updateUrl = projectHref({ projectUrl: update.projectUrl }) || projectHref(project);
+        const details = update.details ? `<details><summary>Read the full update</summary><p>${escapeHtml(update.details)}</p></details>` : '';
+        const link = updateUrl ? `<a href="${escapeHtml(updateUrl)}" target="_blank" rel="noopener">Open project site <i class="bi bi-arrow-up-right"></i></a>` : '';
+        return `<article class="project-progress-entry"><div class="project-progress-entry-marker"><i class="bi bi-stars"></i></div><div class="project-progress-entry-body"><div class="project-progress-entry-meta"><span>${escapeHtml(update.stage || project.stage || 'Project update')}</span><time datetime="${escapeHtml(date || '')}">${escapeHtml(progressDateLabel(date))}</time></div><h4>${escapeHtml(update.title || 'Project progress update')}</h4><p>${escapeHtml(update.summary || 'A new project milestone has been published.')}</p>${update.progressPercent !== undefined ? `<div class="project-progress-entry-bar"><span style="width:${Math.min(100, Math.max(0, Number(update.progressPercent) || 0))}%"></span></div><small>${Math.min(100, Math.max(0, Number(update.progressPercent) || 0))}% work progress</small>` : ''}${details}${link}</div></article>`;
+    }).join('');
+};
+
 const openProjectModal = (projectId, trigger = null) => {
     const project = projects.find((item) => item.id === String(projectId));
     if (!project) return showToast('That project packet is not available right now.');
     const details = project.publicBrief || defaultPublicBrief(project);
     const progress = Math.min(100, Number(project.progress ?? 0));
+    const workProgress = Math.min(100, Math.max(0, Number(project.progressPercent || 0)));
     const modal = document.getElementById('projectModal');
     const proposal = document.getElementById('projectModalProposal');
     const donateArea = document.getElementById('projectModalDonateArea');
@@ -245,7 +281,16 @@ const openProjectModal = (projectId, trigger = null) => {
     document.getElementById('projectModalAiSummary').textContent = details.summary || 'No screening summary has been published yet.';
     const strengths = Array.isArray(details.strengths) ? details.strengths.filter(Boolean) : [];
     document.getElementById('projectModalStrengths').innerHTML = strengths.length ? `<ul>${strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<span>No strengths were published in this packet.</span>';
-    document.getElementById('projectModalJson').textContent = JSON.stringify({ project: { id: project.id, name: project.name, category: project.category, location: project.location, status: project.status, ibRaised: project.ibRaised, ibGoal: project.ibGoal }, publicBrief: details }, null, 2);
+    document.getElementById('projectModalProjectStage').textContent = project.stage || details.stage || 'Stage not published';
+    document.getElementById('projectModalWorkProgress').textContent = `${workProgress}% complete`;
+    document.getElementById('projectModalWorkBar').style.width = `${workProgress}%`;
+    renderProjectUpdates(project);
+    const projectLink = document.getElementById('projectModalProjectLink');
+    const projectLinkWrap = document.getElementById('projectModalProjectLinkWrap');
+    const projectUrl = projectHref(project);
+    projectLinkWrap.hidden = !projectUrl;
+    if (projectUrl) projectLink.href = projectUrl;
+    document.getElementById('projectModalJson').textContent = JSON.stringify({ project: { id: project.id, name: project.name, category: project.category, location: project.location, status: project.status, ibRaised: project.ibRaised, ibGoal: project.ibGoal, projectUrl: project.projectUrl, stage: project.stage, progressPercent: workProgress, progressUpdates: project.progressUpdates }, publicBrief: details }, null, 2);
     proposal.hidden = !proposalUrl;
     if (proposalUrl) proposal.href = proposalUrl;
     donateArea.hidden = progress >= 100;

@@ -72,6 +72,21 @@ const documentResourcePath = (projectId, collection, documentId) => `projects/${
 const supportResourcePath = (projectId, uid, projectKey) => `projects/${projectId}/databases/(default)/documents/users/${uid}/support/${projectKey}`;
 const commitUrl = (projectId) => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents:commit`;
 
+const safeProjectUrl = (value) => {
+    const url = String(value || '').trim();
+    return /^https:\/\//i.test(url) || /^project-proposal\.html(?:\?|#|$)/i.test(url) ? url : '';
+};
+
+const clampPercent = (value) => Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+
+const normalizePublishDate = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return new Date().toISOString();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw}T12:00:00.000Z`;
+    const timestamp = Date.parse(raw);
+    return Number.isNaN(timestamp) ? new Date().toISOString() : new Date(timestamp).toISOString();
+};
+
 const readFirestoreDocument = async (url, token) => {
     const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (response.status === 404) return null;
@@ -148,6 +163,54 @@ export const updateProjectPaymentAccount = async ({ projectId, paypalRecipientEm
     const next = { ...existing, paypalRecipientEmail, paypalAccountConfirmed: Boolean(paypalAccountConfirmed), payoutsEnabled: Boolean(payoutsEnabled), paypalAccountUpdatedAt: now, paypalAccountUpdatedBy: String(updatedBy || '') };
     const response = await fetch(commitUrl(account.projectId), { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes: [{ update: { name: documentResourcePath(account.projectId, 'projects', safeId), fields: Object.fromEntries(Object.entries(next).map(([key, value]) => [key, toFirestoreValue(value)])) }, currentDocument: document.updateTime ? { updateTime: document.updateTime } : { exists: false } }] }) });
     if (!response.ok) throw Object.assign(new Error('The project PayPal account could not be saved safely.'), { statusCode: 409 });
+    return next;
+};
+
+export const updateProjectProgress = async ({ projectId, projectUrl, stage, progressPercent, update, updatedBy = '' }) => {
+    const safeId = String(projectId || '').trim();
+    if (!safeId || safeId.includes('/') || safeId.length > 100) throw Object.assign(new Error('A valid project id is required.'), { statusCode: 400 });
+    const title = String(update?.title || '').trim().slice(0, 140);
+    const summary = String(update?.summary || '').trim().slice(0, 500);
+    const details = String(update?.details || '').trim().slice(0, 3000);
+    if (!title || !summary) throw Object.assign(new Error('A title and public summary are required for each progress update.'), { statusCode: 400 });
+    const nextProjectUrl = String(projectUrl || '').trim();
+    if (nextProjectUrl && !safeProjectUrl(nextProjectUrl)) throw Object.assign(new Error('The project website must use HTTPS.'), { statusCode: 400 });
+    const safeStage = String(stage || '').trim().slice(0, 100);
+    const nextPercent = clampPercent(progressPercent);
+    const { account, token } = await getAccessToken();
+    const document = await readFirestoreDocument(projectDocumentUrl(account.projectId, safeId), token);
+    if (!document) throw Object.assign(new Error('That project could not be found.'), { statusCode: 404 });
+    const existing = fieldsToObject(document.fields || {});
+    if (existing.approved !== true || !existing.approvedBriefId) throw Object.assign(new Error('Only an approved and published project can receive public progress updates.'), { statusCode: 409 });
+    const now = new Date().toISOString();
+    const publishedAt = normalizePublishDate(update?.date);
+    const currentUpdates = Array.isArray(existing.progressUpdates) ? existing.progressUpdates.filter((item) => item && typeof item === 'object').slice(0, 99) : [];
+    const nextUpdate = {
+        id: `update-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+        title,
+        summary,
+        details,
+        stage: safeStage || String(existing.stage || 'In progress'),
+        progressPercent: nextPercent,
+        publishedAt,
+        projectUrl: safeProjectUrl(nextProjectUrl || existing.projectUrl || ''),
+        createdAt: now,
+        updatedBy: String(updatedBy || '')
+    };
+    const next = {
+        ...existing,
+        projectUrl: safeProjectUrl(nextProjectUrl) || safeProjectUrl(existing.projectUrl),
+        stage: safeStage || String(existing.stage || 'In progress'),
+        progressPercent: nextPercent,
+        progressUpdates: [nextUpdate, ...currentUpdates],
+        updatedAt: now
+    };
+    const response = await fetch(commitUrl(account.projectId), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ writes: [{ update: { name: documentResourcePath(account.projectId, 'projects', safeId), fields: Object.fromEntries(Object.entries(next).map(([key, value]) => [key, toFirestoreValue(value)])) }, currentDocument: document.updateTime ? { updateTime: document.updateTime } : { exists: false } }] })
+    });
+    if (!response.ok) throw Object.assign(new Error('The project progress could not be saved safely. Refresh the project and try again.'), { statusCode: 409 });
     return next;
 };
 
@@ -282,6 +345,10 @@ export const publishProjectBrief = async ({ briefId, approvedBy = '' }) => {
         approvedBriefId: safeBriefId,
         approvedAt: existingProject.approvedAt || now,
         proposalUrl: existingProject.proposalUrl || '',
+        projectUrl: existingProject.projectUrl || project.projectUrl || '',
+        stage: existingProject.stage || project.stage || publicBrief.stage || 'Approved for community support',
+        progressPercent: Number.isFinite(Number(existingProject.progressPercent)) ? clampPercent(existingProject.progressPercent) : 0,
+        progressUpdates: Array.isArray(existingProject.progressUpdates) ? existingProject.progressUpdates : [],
         publicBrief,
         ...visuals,
         updatedAt: now

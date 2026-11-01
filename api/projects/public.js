@@ -4,6 +4,7 @@ const PUBLIC_VISUALS = new Set(['visual-water', 'visual-food', 'visual-health', 
 const PUBLIC_ICONS = new Set(['bi-droplet-half', 'bi-flower1', 'bi-heart-pulse', 'bi-stars']);
 
 const number = (value) => Math.max(0, Number(value || 0));
+const percent = (value) => Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
 
 const countryFromLocation = (value) => {
     const location = String(value || '').trim();
@@ -36,6 +37,24 @@ const safeProposalUrl = (value) => {
     return /^https:\/\//i.test(url) || /^project-proposal\.html(?:\?|#|$)/i.test(url) ? url : '';
 };
 
+const publicProgressUpdates = (project) => {
+    const projectUrl = safeProposalUrl(project.projectUrl);
+    return (Array.isArray(project.progressUpdates) ? project.progressUpdates : [])
+        .filter((update) => update && typeof update === 'object')
+        .map((update) => ({
+            id: String(update.id || ''),
+            title: String(update.title || 'Project progress update'),
+            summary: String(update.summary || ''),
+            details: String(update.details || ''),
+            stage: String(update.stage || project.stage || ''),
+            progressPercent: percent(update.progressPercent ?? project.progressPercent),
+            publishedAt: update.publishedAt || update.date || update.createdAt || null,
+            projectUrl: safeProposalUrl(update.projectUrl) || projectUrl
+        }))
+        .sort((first, second) => Date.parse(second.publishedAt || '') - Date.parse(first.publishedAt || ''))
+        .slice(0, 100);
+};
+
 const toPublicProject = (project) => ({
     id: String(project.id || ''),
     name: String(project.name || 'Unnamed project'),
@@ -47,6 +66,10 @@ const toPublicProject = (project) => ({
     ibGoal: number(project.ibGoal),
     approvedAt: project.approvedAt || project.updatedAt || null,
     proposalUrl: safeProposalUrl(project.proposalUrl),
+    projectUrl: safeProposalUrl(project.projectUrl),
+    stage: String(project.stage || ''),
+    progressPercent: percent(project.progressPercent),
+    progressUpdates: publicProgressUpdates(project),
     visual: PUBLIC_VISUALS.has(project.visual) ? project.visual : 'visual-education',
     icon: PUBLIC_ICONS.has(project.icon) ? project.icon : 'bi-stars',
     publicBrief: publicBrief(project)

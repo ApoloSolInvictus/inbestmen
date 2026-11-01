@@ -186,3 +186,36 @@ h1, h2, h3, strong { font-family: 'Space Grotesk', sans-serif; }
 /* Publish a reviewed packet into the public project catalog. */
 .admin-approve-button { background: #e7f6eb; border-radius: 7px; color: #347349; padding: 7px 9px; }
 .admin-approve-button:hover { background: #d2efd9; color: #245d38; }
+.project-progress-admin-grid { display: grid; gap: 18px; grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr); }
+.project-progress-form { display: grid; gap: 8px; }
+.project-progress-form label { color: var(--admin-ink); font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .08em; margin-top: 6px; text-transform: uppercase; }
+.project-progress-form label span { color: var(--admin-muted); text-transform: none; }
+.project-progress-form input, .project-progress-form select, .project-progress-form textarea { background: var(--admin-white); border: 1px solid var(--admin-line); border-radius: 8px; color: var(--admin-ink); font-size: 11px; outline: 0; padding: 10px 11px; width: 100%; }
+.project-progress-form textarea { line-height: 1.55; resize: vertical; }
+.project-progress-form input:focus, .project-progress-form select:focus, .project-progress-form textarea:focus { border-color: var(--admin-cyan); box-shadow: 0 0 0 3px rgba(46,216,208,.15); }
+.project-progress-form-row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.project-progress-form-row > div { display: grid; gap: 8px; min-width: 0; }
+.project-progress-form-row small { color: var(--admin-muted); font-size: 9px; }
+.project-progress-meta { background: var(--admin-paper); border-radius: 9px; color: var(--admin-muted); display: grid; font-size: 10px; gap: 3px; margin: 2px 0 5px; padding: 11px; }
+.project-progress-meta strong { color: var(--admin-ink); font-size: 12px; }
+.project-progress-meta span { line-height: 1.5; }
+.project-progress-form .admin-primary-button { margin-top: 12px; width: 100%; }
+.project-progress-timeline { display: grid; gap: 0; }
+.project-progress-timeline .project-progress-entry { display: grid; gap: 13px; grid-template-columns: 28px minmax(0, 1fr); position: relative; }
+.project-progress-timeline .project-progress-entry:not(:last-child)::before { background: var(--admin-line); content: ''; left: 13px; position: absolute; top: 28px; bottom: 0; width: 1px; }
+.project-progress-timeline .project-progress-entry-marker { align-items: center; background: #e5f7f6; border: 1px solid rgba(21,156,152,.22); border-radius: 50%; color: #159c98; display: flex; height: 28px; justify-content: center; position: relative; width: 28px; z-index: 1; }
+.project-progress-timeline .project-progress-entry-body { border-bottom: 1px solid var(--admin-line); margin-bottom: 21px; min-width: 0; padding-bottom: 21px; }
+.project-progress-timeline .project-progress-entry:last-child .project-progress-entry-body { margin-bottom: 0; }
+.project-progress-entry-meta { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.project-progress-entry-meta span { color: #159c98; font-family: 'DM Mono', monospace; font-size: 8px; text-transform: uppercase; }
+.project-progress-entry-meta time { color: var(--admin-muted); font-family: 'DM Mono', monospace; font-size: 8px; }
+.project-progress-timeline h4 { font-size: 17px; letter-spacing: -.05em; margin: 7px 0 5px; }
+.project-progress-timeline .project-progress-entry-body > p { color: var(--admin-muted); font-size: 10px; line-height: 1.6; margin: 0; }
+.project-progress-entry-bar { background: var(--admin-line); border-radius: 4px; height: 5px; margin-top: 12px; max-width: 300px; overflow: hidden; }
+.project-progress-entry-bar span { background: linear-gradient(90deg, #159c98, var(--admin-cyan)); border-radius: inherit; display: block; height: 100%; }
+.project-progress-timeline .project-progress-entry-body > small { color: var(--admin-muted); display: block; font-family: 'DM Mono', monospace; font-size: 8px; margin-top: 4px; text-transform: uppercase; }
+.project-progress-timeline details { margin-top: 10px; }
+.project-progress-timeline details summary { color: #159c98; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 8px; text-transform: uppercase; }
+.project-progress-timeline details p { color: var(--admin-muted); font-size: 10px; line-height: 1.6; margin: 7px 0 0; white-space: pre-wrap; }
+@media (max-width: 950px) { .project-progress-admin-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .project-progress-form-row { grid-template-columns: 1fr; } }

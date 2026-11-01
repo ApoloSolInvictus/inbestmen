@@ -48,7 +48,8 @@
             <nav class="admin-nav" aria-label="Admin navigation">
                 <button class="admin-nav-link active" data-admin-view="overview" type="button"><i class="bi bi-grid-1x2"></i><span>Overview</span></button>
                 <button class="admin-nav-link" data-admin-view="agents" type="button"><i class="bi bi-soundwave"></i><span>ElevenLabs agents</span><b id="agentNavCount" class="admin-nav-count">—</b></button>
-                    <button class="admin-nav-link" data-admin-view="reviews" type="button"><i class="bi bi-clipboard-check"></i><span>Project review</span><b id="reviewNavCount" class="admin-nav-count coral">0</b></button>
+                <button class="admin-nav-link" data-admin-view="reviews" type="button"><i class="bi bi-clipboard-check"></i><span>Project review</span><b id="reviewNavCount" class="admin-nav-count coral">0</b></button>
+                <button class="admin-nav-link" data-admin-view="progress" type="button"><i class="bi bi-journal-richtext"></i><span>Project progress</span></button>
                 <button class="admin-nav-link" data-admin-view="payments" type="button"><i class="bi bi-cash-stack"></i><span>Payment ledger</span></button>
                 <button class="admin-nav-link" data-admin-view="completed" type="button"><i class="bi bi-stars"></i><span>Completed projects</span></button>
             </nav>
@@ -99,6 +100,41 @@
                     <div class="admin-view-heading"><div><span class="admin-eyebrow">Human judgment</span><h2>Projects ready for a decision.</h2><p>Review real project briefs after they arrive from ElevenLabs.</p></div><span class="admin-filter-label"><i class="bi bi-funnel"></i> Live data only</span></div>
                     <article class="admin-panel table-panel"><div id="liveReviewState" class="live-data-state">No project briefs are ready for review.</div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Project</th><th>Founder / location</th><th>AI brief</th><th>Goal</th><th>Decision</th></tr></thead><tbody id="liveReviewBody"></tbody></table></div></article>
                     <div id="briefDocument" class="admin-panel brief-document" hidden><div class="admin-panel-heading"><div><span class="admin-eyebrow">Board packet</span><h3 id="briefDocumentTitle">Project brief</h3></div><div class="brief-document-actions"><button id="approveBriefDocument" class="admin-text-button admin-approve-button" type="button"><i class="bi bi-check2-circle"></i> Approve to projects</button><button id="downloadBriefJson" class="admin-text-button" type="button"><i class="bi bi-download"></i> JSON</button><button id="printBriefDocument" class="admin-text-button" type="button"><i class="bi bi-printer"></i> Print</button><button id="deleteBriefDocument" class="admin-text-button admin-danger-button" type="button"><i class="bi bi-trash3"></i> Remove from list</button><button id="closeBriefDocument" class="admin-text-button" type="button">Close</button></div></div><div id="briefDocumentMeta" class="brief-document-meta"></div><div id="briefDocumentSummary" class="brief-document-summary"></div><div class="brief-document-section"><div class="brief-document-section-heading"><span class="admin-eyebrow">Captured project information</span><h4>Founder and project details</h4></div><div id="briefDocumentFacts" class="brief-document-facts"></div></div><div class="brief-document-section"><div class="brief-document-section-heading"><span class="admin-eyebrow">Conversation evidence</span><h4>ElevenLabs transcript</h4></div><div id="briefDocumentTranscript" class="brief-document-transcript"></div></div><details class="brief-document-raw"><summary>View complete source JSON</summary><pre id="briefDocumentContent" class="brief-document-content"></pre></details><p class="admin-footnote"><i class="bi bi-info-circle"></i> This document organizes submitted evidence for human review. It is not an accounting certification, valuation, legal opinion or promise of funding. Removing it only removes the stored brief from this dashboard; it does not delete the original ElevenLabs conversation.</p></div>
+                </section>
+
+                <section class="admin-view" data-admin-panel="progress">
+                    <div class="admin-view-heading"><div><span class="admin-eyebrow">Project journal</span><h2>Show the work in motion.</h2><p>Publish the milestones, current stage and official project link that the community will see in the project popup.</p></div><span class="admin-filter-label"><i class="bi bi-broadcast"></i> Public updates</span></div>
+                    <div class="project-progress-admin-grid">
+                        <article class="admin-panel">
+                            <div class="admin-panel-heading"><div><span class="admin-eyebrow">Management update</span><h3>Add a milestone.</h3></div></div>
+                            <form id="projectProgressForm" class="project-progress-form">
+                                <label for="progressProjectSelect">Approved project</label>
+                                <select id="progressProjectSelect" required><option value="">Select an approved project</option></select>
+                                <div id="progressProjectMeta" class="project-progress-meta">Sign in with an approved management account to load projects.</div>
+                                <label for="progressProjectUrl">Official project website</label>
+                                <input id="progressProjectUrl" type="url" placeholder="https://project.example.com" autocomplete="url">
+                                <div class="project-progress-form-row">
+                                    <div><label for="progressStage">Current stage</label><input id="progressStage" type="text" placeholder="Research, build, launch…" maxlength="100"></div>
+                                    <div><label for="progressPercent">Work progress (%)</label><input id="progressPercent" type="number" min="0" max="100" step="1" value="0" inputmode="numeric"><small>Separate from community funding.</small></div>
+                                </div>
+                                <label for="progressTitle">Update title</label>
+                                <input id="progressTitle" type="text" placeholder="Prototype completed" maxlength="140" required>
+                                <label for="progressDate">Publish date</label>
+                                <input id="progressDate" type="date" required>
+                                <label for="progressSummary">Public summary</label>
+                                <textarea id="progressSummary" rows="3" maxlength="500" placeholder="What changed since the last update?" required></textarea>
+                                <label for="progressDetails">Detailed update <span>(optional)</span></label>
+                                <textarea id="progressDetails" rows="5" maxlength="3000" placeholder="Share the evidence, next steps and context the community should know."></textarea>
+                                <button id="saveProjectProgress" class="admin-primary-button compact" type="submit"><i class="bi bi-send"></i> Publish update</button>
+                            </form>
+                        </article>
+                        <article class="admin-panel">
+                            <div class="admin-panel-heading"><div><span class="admin-eyebrow">Community view</span><h3 id="progressProjectTitle">Select an approved project.</h3></div><button id="refreshProjectProgress" class="admin-text-button" type="button"><i class="bi bi-arrow-clockwise"></i> Refresh</button></div>
+                            <div id="projectProgressState" class="live-data-state">Approved projects and their published milestones will appear here.</div>
+                            <div id="projectProgressTimeline" class="project-progress-timeline"></div>
+                        </article>
+                    </div>
+                    <p class="admin-footnote"><i class="bi bi-info-circle"></i> Published updates are visible to signed-in members and the public project catalog after approval. Do not place private contact data, payment credentials or unverified legal claims in this journal.</p>
                 </section>
 
                 <section class="admin-view" data-admin-panel="payments">

@@ -99,6 +99,8 @@ const loadSystemHealth = async () => {
 };
 
 let paymentLedger = null;
+let progressProjects = [];
+let selectedProgressProjectId = '';
 const formatIbUsd = (value) => `$${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
 const renderPaymentLedger = (data) => {
@@ -143,6 +145,94 @@ const loadPaymentLedger = async () => {
         document.getElementById('paymentLedgerState').innerHTML = '<i class="bi bi-exclamation-triangle"></i> Ledger unavailable';
         document.getElementById('paymentLedgerStateMessage').textContent = error.message || 'The payment ledger could not be loaded.';
         document.getElementById('paymentLedgerStateMessage').style.color = '#a24e46';
+    }
+};
+
+const progressDateInputValue = (value = new Date()) => {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.valueOf())) return '';
+    return date.toISOString().slice(0, 10);
+};
+
+const renderProgressTimeline = (project) => {
+    const timeline = document.getElementById('projectProgressTimeline');
+    const updates = (Array.isArray(project?.progressUpdates) ? project.progressUpdates : []).slice().sort((first, second) => Date.parse(second.publishedAt || second.date || second.createdAt || '') - Date.parse(first.publishedAt || first.date || first.createdAt || ''));
+    if (!updates.length) {
+        timeline.innerHTML = '<div class="live-empty-state"><i class="bi bi-journal"></i><strong>No milestones published yet.</strong><span>The first approved update will appear in the member project popup.</span></div>';
+        return;
+    }
+    timeline.innerHTML = updates.map((update) => {
+        const percent = Math.min(100, Math.max(0, Math.round(Number(update.progressPercent) || 0)));
+        return `<article class="project-progress-entry"><div class="project-progress-entry-marker"><i class="bi bi-check2"></i></div><div class="project-progress-entry-body"><div class="project-progress-entry-meta"><span>${escapeHtml(update.stage || project.stage || 'Project update')}</span><time>${escapeHtml(formatDate(update.publishedAt || update.date || update.createdAt))}</time></div><h4>${escapeHtml(update.title || 'Project progress update')}</h4><p>${escapeHtml(update.summary || '')}</p><div class="project-progress-entry-bar"><span style="width:${percent}%"></span></div><small>${percent}% work progress</small>${update.details ? `<details><summary>Read details</summary><p>${escapeHtml(update.details)}</p></details>` : ''}</div></article>`;
+    }).join('');
+};
+
+const renderSelectedProgressProject = () => {
+    const project = progressProjects.find((item) => item.id === selectedProgressProjectId) || progressProjects[0];
+    const select = document.getElementById('progressProjectSelect');
+    const state = document.getElementById('projectProgressState');
+    const title = document.getElementById('progressProjectTitle');
+    if (!project) {
+        selectedProgressProjectId = '';
+        title.textContent = 'Select an approved project.';
+        state.textContent = 'No approved projects are available for progress updates yet.';
+        document.getElementById('projectProgressTimeline').innerHTML = '';
+        return;
+    }
+    selectedProgressProjectId = project.id;
+    select.value = project.id;
+    title.textContent = project.name;
+    state.textContent = `${project.category || 'Community project'} · ${project.location || 'Location not captured'} · ${project.progressPercent || 0}% work progress · ${project.progressUpdates?.length || 0} published update${project.progressUpdates?.length === 1 ? '' : 's'}.`;
+    document.getElementById('progressProjectMeta').innerHTML = `<strong>${escapeHtml(project.name)}</strong><span>${escapeHtml(project.status || 'Approved for community support')} · ${formatIbUsd(project.ibRaised)} of ${formatIbUsd(project.ibGoal)} community funding</span>`;
+    document.getElementById('progressProjectUrl').value = project.projectUrl || '';
+    document.getElementById('progressStage').value = project.stage || '';
+    document.getElementById('progressPercent').value = String(project.progressPercent || 0);
+    renderProgressTimeline(project);
+};
+
+const renderProgressManager = (data) => {
+    progressProjects = Array.isArray(data.projects) ? data.projects : [];
+    const select = document.getElementById('progressProjectSelect');
+    document.getElementById('projectProgressState').style.color = '';
+    select.innerHTML = progressProjects.length ? `<option value="">Select an approved project</option>${progressProjects.map((project) => `<option value="${escapeHtml(project.id)}">${escapeHtml(project.name)}</option>`).join('')}` : '<option value="">No approved projects yet</option>';
+    const retained = progressProjects.some((project) => project.id === selectedProgressProjectId) ? selectedProgressProjectId : progressProjects[0]?.id || '';
+    selectedProgressProjectId = retained;
+    renderSelectedProgressProject();
+    document.getElementById('progressDate').value = document.getElementById('progressDate').value || progressDateInputValue();
+};
+
+const loadProjectProgress = async () => {
+    try {
+        renderProgressManager(await apiFetch('/api/admin/project-progress'));
+    } catch (error) {
+        document.getElementById('projectProgressState').textContent = error.message || 'Project progress could not be loaded.';
+        document.getElementById('projectProgressState').style.color = '#a24e46';
+    }
+};
+
+const saveProjectProgress = async (event) => {
+    event.preventDefault();
+    const projectId = document.getElementById('progressProjectSelect').value;
+    if (!projectId) return showToast('Select an approved project first.');
+    const button = document.getElementById('saveProjectProgress');
+    const progressPercent = Number(document.getElementById('progressPercent').value);
+    if (!Number.isInteger(progressPercent) || progressPercent < 0 || progressPercent > 100) return showToast('Work progress must be a whole number from 0 to 100.');
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-arrow-repeat"></i> Publishing…';
+    try {
+        const data = await apiFetch('/api/admin/project-progress', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, projectUrl: document.getElementById('progressProjectUrl').value.trim(), stage: document.getElementById('progressStage').value.trim(), progressPercent, update: { title: document.getElementById('progressTitle').value.trim(), date: document.getElementById('progressDate').value, summary: document.getElementById('progressSummary').value.trim(), details: document.getElementById('progressDetails').value.trim() } }) });
+        progressProjects = progressProjects.map((project) => project.id === projectId ? data.project : project);
+        renderProgressManager({ projects: progressProjects });
+        document.getElementById('progressTitle').value = '';
+        document.getElementById('progressSummary').value = '';
+        document.getElementById('progressDetails').value = '';
+        document.getElementById('progressDate').value = progressDateInputValue();
+        showToast('Project progress was published to the community view.');
+    } catch (error) {
+        showToast(error.message || 'The project progress could not be published.');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="bi bi-send"></i> Publish update';
     }
 };
 
@@ -423,12 +513,13 @@ const loadConversations = async (append = false) => {
 const loadLiveOperations = async () => {
     if (!currentUser) return;
     setLiveMessage('Checking ElevenLabs, conversation history and project brief storage…');
-    const [agentResult, conversationResult, briefResult, healthResult, paymentResult] = await Promise.allSettled([
+    const [agentResult, conversationResult, briefResult, healthResult, paymentResult, progressResult] = await Promise.allSettled([
         apiFetch('/api/elevenlabs/status'),
         loadConversations(false),
         apiFetch('/api/projects/briefs?limit=10'),
         loadSystemHealth(),
-        loadPaymentLedger()
+        loadPaymentLedger(),
+        apiFetch('/api/admin/project-progress')
     ]);
     if (agentResult.status === 'fulfilled') renderAgentStatus(agentResult.value);
     else setLiveMessage(agentResult.reason.message, true);
@@ -437,6 +528,11 @@ const loadLiveOperations = async () => {
     else {
         document.getElementById('liveBriefState').textContent = briefResult.reason.message;
         document.getElementById('liveBriefState').style.color = '#a24e46';
+    }
+    if (progressResult.status === 'fulfilled') renderProgressManager(progressResult.value);
+    else {
+        document.getElementById('projectProgressState').textContent = progressResult.reason.message;
+        document.getElementById('projectProgressState').style.color = '#a24e46';
     }
 };
 
@@ -516,6 +612,9 @@ document.getElementById('adminSignOut').addEventListener('click', async () => { 
 document.getElementById('refreshLiveData').addEventListener('click', loadLiveOperations);
 document.getElementById('refreshSystemHealth').addEventListener('click', loadSystemHealth);
 document.getElementById('refreshPaymentLedger').addEventListener('click', loadPaymentLedger);
+document.getElementById('refreshProjectProgress').addEventListener('click', loadProjectProgress);
+document.getElementById('progressProjectSelect').addEventListener('change', (event) => { selectedProgressProjectId = event.target.value; renderSelectedProgressProject(); });
+document.getElementById('projectProgressForm').addEventListener('submit', saveProjectProgress);
 document.getElementById('syncRecentCalls').addEventListener('click', syncRecentCalls);
 document.getElementById('clearStoredBriefs').addEventListener('click', clearStoredBriefs);
 document.getElementById('loadMoreConversations').addEventListener('click', () => loadConversations(true));
